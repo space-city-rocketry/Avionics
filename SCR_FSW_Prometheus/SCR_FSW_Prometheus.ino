@@ -1,3 +1,22 @@
+/* Avionics Flight Software Alpha 0.1 - RevA
+   Authors: Samar Mathur & Michael Greer
+
+   The Flight Avionics subsystem in the Space City Rocketry competition team is
+   responsible for executing the major operations of the Recovery phase of the
+   IREC mission CONOPS.
+
+   This software package controls the secondary system in the Avionics package,
+   which is a custom electronics package with an Arduino-type microcontroller
+   acting as the main flight computer. The system consists of multiple sensors
+   together with a transmitter and data logger that monitors, saves, and transmits
+   mission data and uses it to make operational decisions during flight.
+
+   Current Capabilities list:
+
+*/
+
+
+//Library includes
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
@@ -5,19 +24,28 @@
 #include <Adafruit_BMP085.h>
 #include "SoftwareSerial.h"
 
+//Preprocessor Macro declarations
+#define BNO055_SAMPLERATE_DELAY_MS (100)
+#define STANDBY 1   //Macro for standby state
+#define ASCENT 2    //Macro for ascent state
+#define DESCENT 3   //Macro for descent state
+#define RECOVERY 4  //Macro for recovery state
+
+//Global variable initializations
+uint8_t swState = STANDBY; //Initialize software state in standby mode
 char a[] = "<";
 char b[] = ">,";
 int packetno = 1;
 int pressure, altitude, temp, tiltx, tilty, tiltz;
 int incomingByte = 0;
 int hOld = 0;
-int StandbyFlag,AscentFlag,DescentFlag,RecoveryFlag,xaccel,yaccel,zaccel;
-int int AccelCalibration; 
-int A1,A2,A3, v;
+int StandbyFlag, AscentFlag, DescentFlag, RecoveryFlag, xaccel, yaccel, zaccel;
+int int AccelCalibration;
+int A1, A2, A3, v;
 int BaroStorage[3];
-int GPSStorage[3]; 
+int GPSStorage[3];
 int AccelStorage[3];
-#define BNO055_SAMPLERATE_DELAY_MS (100)
+
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 Adafruit_BMP085 bmp;
 
@@ -94,18 +122,19 @@ void setup(void)
   Serial.println("Orientation Sensor Test"); Serial.println("");
 
   if (!bmp.begin()) {
-  Serial.println("Could not find a valid BMP085 sensor, check wiring!");
-  while (1) {}}
+    Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+    while (1) {}
+  }
   /* Initialise the sensor */
-  if(!bno.begin())
+  if (!bno.begin())
   {
     /* There was a problem detecting the BNO055 ... check your connections */
     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while(1);
+    while (1);
   }
 
   delay(1000);
-  
+
   pinMode(13, OUTPUT);
 
   /* Display some basic information on this sensor */
@@ -121,172 +150,143 @@ void setup(void)
   mySerial.begin(9600);
   mySerial.println("Begin Transmission");
 
-StandbyFlag = 1;
-AscentFlag = 0;
-DescentFlag = 0;
-RecoveryFlag = 0;
+  /* Remove Later */
+  StandbyFlag = 1;
+  AscentFlag = 0;
+  DescentFlag = 0;
+  RecoveryFlag = 0;
+  /*              */
 
-int AccelFlag =0;
-}
 
+  int AccelFlag = 0;
 }
 
 
 void loop(void)
 {
 
+  switch (swState) {
+    case STANDBY: //Standby state code block
+      break;
+    case ASCENT: //Ascent state code block
+      sensors_event_t event;
+      bno.getEvent(&event);
+      imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER); //wrong vector
+      xaccel = euler.x();
+      yaccel = euler.y();
+      zaccel = euler.z();
+      tiltx = event.orientation.x;
+      tilty = event.orientation.y;
+      tiltz = event.orientation.z;
+
+      delay(BNO055_SAMPLERATE_DELAY_MS);
+
+      temp = bmp.readTemperature();
+      pressure = bmp.readPressure();
+      altitude = bmp.readAltitude();
+      deltaH = altitude - hOld;
+      hOld = bmp.readAltitude();
+      Serial.println(a + packetno + b + a + altitude + b + a + pressure + b + a + temp + b + a + xaccel + b + a + yaccel + b + a + zaccel + b + a + tiltx + b + a + tilty + b + a + tiltz + b);
+      packetno = packetno + 1;
+
+      A1 = 1 / (deltaH + 1); //Baro
+      A2 = 9.81 / accel // IMU
+           //A3 = 1/(deltaH+1); //GPS
+
+           v = sqrt(A1 ^ 2 + A2 ^ 2 + A3 ^ 2) * 100;
+      if ( v = ! 300 || v = ! 325 || v = ! 275) {}
+      if (v == 300 || v == 325 || v == 275) {
+        /* Remove Later
+        AscentFlag = 0;
+        DescentFlag = 1;
+        */
+        swState = DESCENT; //Change state to Descent
+        int ApogeeH = altitude;
+        Serial.println(DescentFlag);
+        Serial.println(ApogeeH);
+      }
+
+      break;
+    case DESCENT: //Descent state code block
+
+      sensors_event_t event;
+      bno.getEvent(&event);
+      imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+      xaccel = euler.x();
+      yaccel = euler.y();
+      zaccel = euler.z();
+      tiltx = event.orientation.x;
+      tilty = event.orientation.y;
+      tiltz = event.orientation.z;
+
+      delay(BNO055_SAMPLERATE_DELAY_MS);
+
+      temp = bmp.readTemperature();
+      pressure = bmp.readPressure();
+      altitude = bmp.readAltitude();
+      deltaH = altitude - hOld;
+      hOld = bmp.readAltitude();
+      Serial.println(a + packetno + b + a + altitude + b + a + pressure + b + a + temp + b + a + xaccel + b + a + yaccel + b + a + zaccel + b + a + tiltx + b + a + tilty + b + a + tiltz + b);
+      packetno = packetno + 1;
+
+      if (altitude == h1) {
+        digitalWrite(pin1, HIGH);
+        delay(100);
+        digitalWrite(pin1, LOW);
+        int DrogueDeploymentFlag = 1;
+        Serial.println(DrogueDeploymentFlag);
+
+      }
+      if (altitude == h2) {
+        digitalWrite(pin2, HIGH);
+        delay(100);
+        digitalWrite(pin2, LOW);
+        int MainDeploymentFlag = 1;
+        Serial.println(MainDeploymentFlag); 
+        /* Remove later
+        DescentFlag = 0;
+        StandbyFlag = 1; // was this supposed to be recovery?
+        */
+        swState = RECOVERY; //Change state to Recovery
+
+      }
+      break;
+    case RECOVERY: //Recovery state code block
 
 
-  while(StandbyFlag = 1){  //Standby
-   sensors_event_t event;
-   bno.getEvent(&event);
-   imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-   tiltx = event.orientation.x;
-   tilty = event.orientation.y;
-   tiltz = event.orientation.z;   
-   xaccel = euler.x();
-   yaccel = euler.y();
-   zaccel = euler.z(); 
-  delay(BNO055_SAMPLERATE_DELAY_MS);
+      sensors_event_t event;
+      bno.getEvent(&event);
+      imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER); 
+      xaccel = euler.x();
+      yaccel = euler.y();
+      zaccel = euler.z();
+      tiltx = event.orientation.x;
+      tilty = event.orientation.y;
+      tiltz = event.orientation.z;
 
-    temp = bmp.readTemperature();
-    pressure = bmp.readPressure();
-    altitude = bmp.readAltitude();
-    deltaH = altitude - hOld;
-    hOld = bmp.readAltitude();
-    //packno, altitude, pressure, temp, accelx, accely, accelz, tiltx, tilty, tiltz
-  Serial.println(a + packetno + b + a + altitude + b + a + pressure + b + a + temp + b + a + xaccel + b + a + yaccel + b + a + zaccel + b + a + tiltx + b + a + tilty + b + a + tiltz + b);
-  packetno = packetno + 1;
+      delay(BNO055_SAMPLERATE_DELAY_MS);
 
-if AccelFlag = 0{
-AccelFlag =1;
-AccelCalibrationx = xaccel;
-AccelCalibrationy = yaccel;
-AccelCalibrationz = zaccel;
+      temp = bmp.readTemperature();
+      pressure = bmp.readPressure();
+      altitude = bmp.readAltitude();
+      deltaH = altitude - hOld;
+      hOld = bmp.readAltitude();
+      Serial.println(a + packetno + b + a + altitude + b + a + pressure + b + a + temp + b + a + xaccel + b + a + yaccel + b + a + zaccel + b + a + tiltx + b + a + tilty + b + a + tiltz + b);
+      packetno = packetno + 1;
 
-
-}
-
-  if(deltaH > 0.5 && zaccel > AccelCalibrationz){
-    StandbyFlag = 0;
-    AscentFlag = 1;
-    Serial.println(AscentFlag);
-
+      delay(10000);
+      break;
   }
-  
-  
+
+  if (Serial.available() > 0) {
+    incomingByte = Serial.read();
   }
-  
-  while(AscentFlag = 1){  //Ascent
-   sensors_event_t event;
-   bno.getEvent(&event);
-   imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-   xaccel = euler.x();
-   yaccel = euler.y();
-   zaccel = euler.z(); 
-   tiltx = event.orientation.x;
-   tilty = event.orientation.y;
-   tiltz = event.orientation.z;   
-  
-   delay(BNO055_SAMPLERATE_DELAY_MS);
-
-    temp = bmp.readTemperature();
-    pressure = bmp.readPressure();
-    altitude = bmp.readAltitude();
-    deltaH = altitude - hOld;
-    hOld = bmp.readAltitude();
-  Serial.println(a + packetno + b + a + altitude + b + a + pressure + b + a + temp + b + a + xaccel + b + a + yaccel + b + a + zaccel + b + a + tiltx + b + a + tilty + b + a + tiltz + b);
-  packetno = packetno + 1;
-
-  A1 = 1/(deltaH+1); //Baro
-  A2 = 9.81/accel // IMU
-  //A3 = 1/(deltaH+1); //GPS
-
-  v = sqrt(A1^2+A2^2+A3^2) * 100;
-  if( v =! 300 || v=! 325 || v=! 275){}
-  if(v == 300 || v == 325 || v == 275){
-    AscentFlag = 0;
-    DescentFlag = 1;
-    int ApogeeH = altitude;
-    Serial.println(DescentFlag);
-    Serial.println(ApogeeH);
-    }
-  }
-
-  
-  while(DescentFlag = 1){  //Descent
-     sensors_event_t event;
-   bno.getEvent(&event);
-   imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-   xaccel = euler.x();
-   yaccel = euler.y();
-   zaccel = euler.z();    
-   tiltx = event.orientation.x;
-   tilty = event.orientation.y;
-   tiltz = event.orientation.z;   
-  
-   delay(BNO055_SAMPLERATE_DELAY_MS);
-
-    temp = bmp.readTemperature();
-    pressure = bmp.readPressure();
-    altitude = bmp.readAltitude();
-    deltaH = altitude - hOld;
-    hOld = bmp.readAltitude();
-  Serial.println(a + packetno + b + a + altitude + b + a + pressure + b + a + temp + b + a + xaccel + b + a + yaccel + b + a + zaccel + b + a + tiltx + b + a + tilty + b + a + tiltz + b);
-  packetno = packetno + 1;
-
-  if(altitude == h1){
-    digitalWrite(pin1,HIGH);
-    delay(100);
-    digitalWrite(pin1,LOW);
-    int DrogueDeploymentFlag =1;
-    Serial.println(DrogueDeploymentFlag);
-    
-  }
-   if(altitude == h2){
-    digitalWrite(pin2,HIGH);
-    delay(100);
-    digitalWrite(pin2,LOW);
-    int MainDeploymentFlag =1;
-    Serial.println(MainDeploymentFlag);\
-    DescentFlag=0;
-    StandbyFlag=1;
-    
-  }
-  while(StandbyFlag = 1){  //Recovery
-
-   sensors_event_t event;
-   bno.getEvent(&event);
-   imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-   xaccel = euler.x();
-   yaccel = euler.y();
-   zaccel = euler.z(); 
-   tiltx = event.orientation.x;
-   tilty = event.orientation.y;
-   tiltz = event.orientation.z;   
-  
-   delay(BNO055_SAMPLERATE_DELAY_MS);
-
-    temp = bmp.readTemperature();
-    pressure = bmp.readPressure();
-    altitude = bmp.readAltitude();
-    deltaH = altitude - hOld;
-    hOld = bmp.readAltitude();
-  Serial.println(a + packetno + b + a + altitude + b + a + pressure + b + a + temp + b + a + xaccel + b + a + yaccel + b + a + zaccel + b + a + tiltx + b + a + tilty + b + a + tiltz + b);
-    packetno = packetno + 1;
-    
-    delay(10000);
-    
-  
-  }
-  
-
-
-  if (Serial.available() > 0) {incomingByte = Serial.read();}
-  if (incomingByte != 0){  
+  if (incomingByte != 0) {
     digitalWrite(6, HIGH);
     delay(500);
     digitalWrite(6, LOW);
   }
- 
+
+
+}
 }
