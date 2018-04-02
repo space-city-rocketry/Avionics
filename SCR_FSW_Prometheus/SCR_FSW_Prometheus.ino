@@ -26,13 +26,23 @@
 
 //Preprocessor Macro declarations
 #define BNO055_SAMPLERATE_DELAY_MS (100)
-#define STANDBY 1   //Macro for standby state
-#define ASCENT 2    //Macro for ascent state
-#define DESCENT 3   //Macro for descent state
-#define RECOVERY 4  //Macro for recovery state
+
+enum FSWState {
+  kStandby,
+  kAscent,
+  kDescent,
+  kRecovery
+}
+FSWState state = kStandby; //Initialize software state in standby mode
+
+//REMOVE LATER
+//#define STANDBY 1   //Macro for standby state 
+//#define ASCENT 2    //Macro for ascent state
+//#define DESCENT 3   //Macro for descent state
+//#define RECOVERY 4  //Macro for recovery state
 
 //Global variable initializations
-uint8_t swState = STANDBY; //Initialize software state in standby mode
+//uint8_t swState = STANDBY; //Initialize software state in standby mode
 char a[] = "<";
 char b[] = ">,";
 int packetno = 1;
@@ -165,10 +175,10 @@ void setup(void)
 void loop(void)
 {
 
-  switch (swState) {
-    case STANDBY: //Standby state code block
+  switch (state) {
+    case kStandby: //Standby state code block
       break;
-    case ASCENT: //Ascent state code block
+    case kAscent: //Ascent state code block
       sensors_event_t event;
       bno.getEvent(&event);
       imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER); //wrong vector
@@ -200,14 +210,14 @@ void loop(void)
         AscentFlag = 0;
         DescentFlag = 1;
         */
-        swState = DESCENT; //Change state to Descent
+        state = kDescent; //Change state to Descent
         int ApogeeH = altitude;
         Serial.println(DescentFlag);
         Serial.println(ApogeeH);
       }
 
       break;
-    case DESCENT: //Descent state code block
+    case kDescent: //Descent state code block
 
       sensors_event_t event;
       bno.getEvent(&event);
@@ -247,11 +257,11 @@ void loop(void)
         DescentFlag = 0;
         StandbyFlag = 1; // was this supposed to be recovery?
         */
-        swState = RECOVERY; //Change state to Recovery
+        state = kRecovery; //Change state to Recovery
 
       }
       break;
-    case RECOVERY: //Recovery state code block
+    case kRecovery: //Recovery state code block
 
 
       sensors_event_t event;
