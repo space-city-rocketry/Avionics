@@ -18,6 +18,7 @@
 
 //Library includes
 #include <Wire.h>
+#include <SoftwareSerial.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
@@ -60,6 +61,8 @@ int v;
 int BaroStorage[3];
 int GPSStorage[3];
 int AccelStorage[3];
+
+SoftwareSerial mySerial(0, 1); // RX, TX
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 Adafruit_BMP085 bmp;
@@ -202,6 +205,7 @@ void  bmpRetrieve(void){
 }
 
 void apogeeDetect(void){
+      
       Z1 = 1 / (deltaH + 1); //Baro
       Z2 = 9.81 / accel // IMU
            //A3 = 1/(deltaH+1); //GPS
