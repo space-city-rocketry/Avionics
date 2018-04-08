@@ -50,18 +50,21 @@ FSWState state = kStandby;
 //Global variable initializations
 //uint8_t swState = STANDBY; //Initialize software state in standby mode
 int packetno = 1;
-int pressure, altitude, temp, tiltx, tilty, tiltz;
+float pressure, altitude, temp, tiltx, tilty, tiltz,xaccel, yaccel, zaccel, h1;
 int incomingByte = 0;
-int heightOld = 0;
-int StandbyFlag, AscentFlag, DescentFlag, RecoveryFlag, xaccel, yaccel, zaccel;
+float heightOld = 0;
+int StandbyFlag, AscentFlag, DescentFlag, RecoveryFlag, buzzpin;
+int EjectionFlag[1];
+int i = 0; 
 int AccelCalibration;
+int pinNo = 8; //Set pin numbers for ejection charges
 //int BMPCheck;
 //int IMUCheck;
 //int GPSCheck;
 //int TotalCheck;
-int BaroStorage[3];
-int GPSStorage[3];
-int AccelStorage[3];
+float BaroStorage[3];
+float GPSStorage[3];
+float AccelStorage[3];
 //int deltaH;
 
 SoftwareSerial mySerial(2, 3); // RX, TX
@@ -218,7 +221,7 @@ void printing(void) {
   Serial.println(">");
 }
 
-/*void ejection(void) {
+void ejection(void) {
   if (altitude == h1) {
     digitalWrite(pin1, HIGH);
     delay(100);
@@ -233,14 +236,13 @@ void printing(void) {
     digitalWrite(pin2, LOW);
     int MainDeploymentFlag = 1;
     Serial.println(MainDeploymentFlag);
-    /* Remove later
-      DescentFlag = 0;
-      StandbyFlag = 1; // was this supposed to be recovery?
-    */
-/*    state = kRecovery; //Change state to Recovery
+
+    
+    state = kRecovery; //Change state to Recovery
 
   }
-} */
+} 
+
 
 void datalog(void){
 
@@ -322,16 +324,37 @@ void setup(void){
   // set the data rate for the SoftwareSerial port
   mySerial.begin(9600);
   mySerial.println("Begin Transmission");
+  
+  pinMode(pinNo, OUTPUT);
+  digitalWrite(pinNo, LOW);
 
-
+  pinMode(buzzpin, OUTPUT);
+  digitalWrite(buzzpin, LOW);
 
   int AccelFlag = 0;
 }
 
 
-
+void buzzer(void){
+  if (startupFlag = 1){
+    for(int k ==1, k<10, k++){
+    digitalWrite(buzzpin,HIGH);
+    digitalWrite(buzzpin,LOW);
+    }
+  }
+    for(int k ==1, k<10, k++){
+    digitalWrite(buzzpin,HIGH);
+    digitalWrite(buzzpin,LOW);
+    }
+  
+}
 void loop(void)
 {
+ if(startupFlag=1){
+  buzzer();
+  startupFlag = 0;
+ }
+  
   switch (state) {
     case kStandby: //Standby state code block
       imuRetrieve();
