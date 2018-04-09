@@ -24,10 +24,11 @@
 #include <Adafruit_BMP085.h>
 #include "SoftwareSerial.h"
 #include <Adafruit_GPS.h>
-//Preprocessor Macro declarations
-#define BNO055_SAMPLERATE_DELAY_MS (100)
 #include <SPI.h>
 #include <SD.h>
+
+//Preprocessor Macro declarations
+#define BNO055_SAMPLERATE_DELAY_MS (100)
 
 const int chipSelect = 10;
 enum FSWState {
@@ -39,25 +40,23 @@ enum FSWState {
 };
 
 FSWState state = kStandby;
-//Initialize software state in standby mode
 
-//REMOVE LATER
-//#define STANDBY 1   //Macro for standby state
-//#define ASCENT 2    //Macro for ascent state
-//#define DESCENT 3   //Macro for descent state
-//#define RECOVERY 4  //Macro for recovery state
-
-//Global variable initializations
-//uint8_t swState = STANDBY; //Initialize software state in standby mode
 int packetno = 1;
-float pressure, altitude, temp, tiltx, tilty, tiltz,xaccel, yaccel, zaccel, h1;
+float pressure, altitude, temp, tiltx, tilty, tiltz, xaccel, yaccel, zaccel, h1, h2;
 int incomingByte = 0;
 float heightOld = 0;
 int StandbyFlag, AscentFlag, DescentFlag, RecoveryFlag, buzzpin;
+int startupFlag = 1;
 int EjectionFlag[1];
-int i = 0; 
+int i = 0;
 int AccelCalibration;
-int pinNo = 8; //Set pin numbers for ejection charges
+
+
+int ARM = 2; //Arming pin set
+int EVENT_1_PIN = 3; //Pin set for Event 1, drogue deployment
+int EVENT_2_PIN = 4; //Pin set for Event 2, main deployment
+
+
 //int BMPCheck;
 //int IMUCheck;
 //int GPSCheck;
@@ -67,12 +66,13 @@ float GPSStorage[3];
 float AccelStorage[3];
 //int deltaH;
 
-SoftwareSerial mySerial(2, 3); // RX, TX
-SoftwareSerial GPSSerial(5, 4);
+//SoftwareSerial mySerial(2, 3); // RX, TX
+//SoftwareSerial GPSSerial(5, 4);
+
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 Adafruit_BMP085 bmp;
-Adafruit_GPS GPS(&mySerial);
+Adafruit_GPS GPS(&Serial1);
 
 #define GPSECHO  true
 
@@ -145,10 +145,10 @@ void imuRetrieve(void) {
   delay(BNO055_SAMPLERATE_DELAY_MS);
   sensors_event_t event;
   bno.getEvent(&event);
-  imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER); //wrong vector
-  xaccel = euler.x();
-  yaccel = euler.y();
-  zaccel = euler.z();
+  imu::Vector<3> accel = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  xaccel = accel.x();
+  yaccel = accel.y();
+  zaccel = accel.z();
   tiltx = event.orientation.x;
   tilty = event.orientation.y;
   tiltz = event.orientation.z;
@@ -162,45 +162,45 @@ void  bmpRetrieve(void) {
   heightOld = bmp.readAltitude();
 }
 
-void GPSRetrieve(void){
+void GPSRetrieve(void) {
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
 }
 
 //void apogeeDetect(void) {
 
-  //BMPCheck = 1 / (deltaH + 1); //Baro
-  //IMUCheck = 9.81 / accel // IMU
-             //GPSCheck = 1/(deltaH+1); //GPS
+//BMPCheck = 1 / (deltaH + 1); //Baro
+//IMUCheck = 9.81 / accel // IMU
+//GPSCheck = 1/(deltaH+1); //GPS
 
-          //   TotalCheck = sqrt(BMPCheck ^ 2 + IMUCheck ^ 2 + GPSCheck ^ 2) * 100;
+//   TotalCheck = sqrt(BMPCheck ^ 2 + IMUCheck ^ 2 + GPSCheck ^ 2) * 100;
 /*  if ( TotalCheck = ! 300 || TotalCheck = ! 325 || TotalCheck = ! 275) {}
- if (TotalCheck == 300 || TotalCheck == 325 || TotalCheck == 275) {
+  if (TotalCheck == 300 || TotalCheck == 325 || TotalCheck == 275) {
     /* Remove Later
       AscentFlag = 0;
       DescentFlag = 1;
-    */
- /*   state = kDescent; //Change state to Descent
-    int ApogeeH = altitude;
-    Serial.println(DescentFlag);
-    Serial.println(ApogeeH); */
- // }
+*/
+/*   state = kDescent; //Change state to Descent
+   int ApogeeH = altitude;
+   Serial.println(DescentFlag);
+   Serial.println(ApogeeH); */
+// }
 //}
 
 void transmit(void) {
-  mySerial.print("<");
-  mySerial.print(packetno); mySerial.print(",");
-  mySerial.print(altitude); mySerial.print(",");
-  mySerial.print(pressure); mySerial.print(",");
-  mySerial.print(temp); mySerial.print(",");
-  mySerial.print(xaccel); mySerial.print(",");
-  mySerial.print(yaccel); mySerial.print(",");
-  mySerial.print(zaccel); mySerial.print(",");
-  mySerial.print(tiltx); mySerial.print(",");
-  mySerial.print(tilty); mySerial.print(",");
-  mySerial.print(tilty); mySerial.print(",");
-  mySerial.print(GPS.minute + 1);
-  mySerial.println(">");
+  Serial2.print("<");
+  Serial2.print(packetno); Serial2.print(",");
+  Serial2.print(altitude); Serial2.print(",");
+  Serial2.print(pressure); Serial2.print(",");
+  Serial2.print(temp); Serial2.print(",");
+  Serial2.print(xaccel); Serial2.print(",");
+  Serial2.print(yaccel); Serial2.print(",");
+  Serial2.print(zaccel); Serial2.print(",");
+  Serial2.print(tiltx); Serial2.print(",");
+  Serial2.print(tilty); Serial2.print(",");
+  Serial2.print(tilty); Serial2.print(",");
+  Serial2.print(GPS.minute + 1);
+  Serial2.println(">");
   packetno = packetno + 1;
 }
 
@@ -223,51 +223,51 @@ void printing(void) {
 
 void ejection(void) {
   if (altitude == h1) {
-    digitalWrite(pin1, HIGH);
+    digitalWrite(EVENT_1_PIN, HIGH);
     delay(100);
-    digitalWrite(pin1, LOW);
+    digitalWrite(EVENT_1_PIN, LOW);
     int DrogueDeploymentFlag = 1;
-    Serial.println(DrogueDeploymentFlag);
+    Serial.println(DrogueDeploymentFlag); //make clear debug messages
 
   }
   if (altitude == h2) {
-    digitalWrite(pin2, HIGH);
+    digitalWrite(EVENT_2_PIN, HIGH);
     delay(100);
-    digitalWrite(pin2, LOW);
+    digitalWrite(EVENT_2_PIN, LOW);
     int MainDeploymentFlag = 1;
     Serial.println(MainDeploymentFlag);
 
-    
+
     state = kRecovery; //Change state to Recovery
 
   }
-} 
+}
 
 
-void datalog(void){
+void datalog(void) {
 
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
 
   // if the file is available, write to it:
   if (dataFile) {
-  dataFile.print("<");
-  dataFile.print(packetno); dataFile.print(",");
-  dataFile.print(altitude); dataFile.print(",");
-  dataFile.print(pressure); dataFile.print(",");
-  dataFile.print(temp); dataFile.print(",");
-  dataFile.print(xaccel); dataFile.print(",");
-  dataFile.print(yaccel); dataFile.print(",");
-  dataFile.print(zaccel); dataFile.print(",");
-  dataFile.print(tiltx); dataFile.print(",");
-  dataFile.print(tilty); dataFile.print(",");
-  dataFile.print(tiltz);
-  dataFile.print(GPS.minute+1);
+    dataFile.print("<");
+    dataFile.print(packetno); dataFile.print(",");
+    dataFile.print(altitude); dataFile.print(",");
+    dataFile.print(pressure); dataFile.print(",");
+    dataFile.print(temp); dataFile.print(",");
+    dataFile.print(xaccel); dataFile.print(",");
+    dataFile.print(yaccel); dataFile.print(",");
+    dataFile.print(zaccel); dataFile.print(",");
+    dataFile.print(tiltx); dataFile.print(",");
+    dataFile.print(tilty); dataFile.print(",");
+    dataFile.print(tiltz);
+    dataFile.print(GPS.minute + 1);
 
-  dataFile.close();
+    dataFile.close();
   }
 }
 
-void setup(void){
+void setup(void) {
   Serial.begin(9600);
   Serial.println("Orientation Sensor Test"); Serial.println("");
 
@@ -292,14 +292,14 @@ void setup(void){
 
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(9600);
-  
+
   // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   // uncomment this line to turn on only the "minimum recommended" data
   //GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
   // For parsing data, we don't suggest using anything but either RMC only or RMC+GGA since
   // the parser doesn't care about other sentences at this time
-  
+
   // Set the update rate
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);   // 1 Hz update rate
   // For the parsing code to work nicely and have time to sort thru the data, and
@@ -321,12 +321,17 @@ void setup(void){
   bno.setExtCrystalUse(true);
   Serial.println("Begin Transmission");
 
-  // set the data rate for the SoftwareSerial port
-  mySerial.begin(9600);
-  mySerial.println("Begin Transmission");
-  
-  pinMode(pinNo, OUTPUT);
-  digitalWrite(pinNo, LOW);
+  //Setup XBEE line (Hardware Serial 2)
+  Serial2.begin(9600);
+  Serial2.println("Begin Transmission");
+
+  //If using third arming transistor, uncomment the ARM pin declaration
+  pinMode(ARM, OUTPUT);
+  digitalWrite(ARM, LOW);
+  pinMode(EVENT_1_PIN, OUTPUT);
+  digitalWrite(EVENT_1_PIN, LOW);
+  pinMode(EVENT_2_PIN, OUTPUT);
+  digitalWrite(EVENT_2_PIN, LOW);
 
   pinMode(buzzpin, OUTPUT);
   digitalWrite(buzzpin, LOW);
@@ -335,26 +340,26 @@ void setup(void){
 }
 
 
-void buzzer(void){
-  if (startupFlag = 1){
-    for(int k ==1, k<10, k++){
-    digitalWrite(buzzpin,HIGH);
-    digitalWrite(buzzpin,LOW);
+void buzzer(void) {
+  if (startupFlag = 1) {
+    for (int k = 1; k < 10; k++) {
+      digitalWrite(buzzpin, HIGH); //no time spacing?
+      digitalWrite(buzzpin, LOW);
     }
   }
-    for(int k ==1, k<10, k++){
-    digitalWrite(buzzpin,HIGH);
-    digitalWrite(buzzpin,LOW);
-    }
-  
+  for (int k = 1; k < 10; k++) {
+    digitalWrite(buzzpin, HIGH);
+    digitalWrite(buzzpin, LOW);
+  }
+
 }
 void loop(void)
 {
- if(startupFlag=1){
-  buzzer();
-  startupFlag = 0;
- }
-  
+  if (startupFlag = 1) {
+    buzzer();
+    startupFlag = 0;
+  }
+
   switch (state) {
     case kStandby: //Standby state code block
       imuRetrieve();
@@ -362,19 +367,19 @@ void loop(void)
       transmit();
       printing();
       datalog();
-      
+
       break;
     case kAscent: //Ascent state code block
       imuRetrieve();
       bmpRetrieve();
       transmit();
-     // apogeeDetect();
+      // apogeeDetect();
       break;
     case kDescent: //Descent state code block
       imuRetrieve();
       bmpRetrieve();
       transmit();
-//      ejection();
+      //      ejection();
       break;
     case kRecovery: //Recovery state code block
       imuRetrieve();
@@ -384,14 +389,15 @@ void loop(void)
       break;
   }
 
-  if (Serial.available() > 0) {
-    incomingByte = Serial.read();
-  }
-  if (incomingByte != 0) {
-    digitalWrite(6, HIGH);
-    delay(500);
-    digitalWrite(6, LOW);
-  }
+  // Artefact?
+  //  if (Serial.available() > 0) {
+  //    incomingByte = Serial.read();
+  //  }
+  //  if (incomingByte != 0) {
+  //    digitalWrite(6, HIGH);
+  //    delay(500);
+  //    digitalWrite(6, LOW);
+  //  }
 
 
 }
