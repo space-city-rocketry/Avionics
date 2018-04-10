@@ -30,7 +30,7 @@
 //Preprocessor Macro declarations
 #define BNO055_SAMPLERATE_DELAY_MS (100)
 
-const int chipSelect = 10;
+const int chipSelect = 53;
 enum FSWState {
   kStandby,
   kAscent,
@@ -42,7 +42,7 @@ enum FSWState {
 FSWState state = kStandby;
 
 int packetno = 1;
-float pressure, altitude, temp, tiltx, tilty, tiltz, xaccel, yaccel, zaccel, h1, h2;
+float pressure, altitude, temp, tiltx, tilty, tiltz, xaccel, yaccel, zaccel, h1, h2, gpsalt;
 int incomingByte = 0;
 float heightOld = 0;
 int StandbyFlag, AscentFlag, DescentFlag, RecoveryFlag, buzzpin;
@@ -66,7 +66,7 @@ float GPSStorage[3];
 float AccelStorage[3];
 //int deltaH;
 
-//SoftwareSerial mySerial(2, 3); // RX, TX
+SoftwareSerial TransmitSerial(2, 3); // RX, TX
 //SoftwareSerial GPSSerial(5, 4);
 
 
@@ -145,26 +145,42 @@ void imuRetrieve(void) {
   delay(BNO055_SAMPLERATE_DELAY_MS);
   sensors_event_t event;
   bno.getEvent(&event);
+  tiltx = event.orientation.x;
+  tilty = event.orientation.y;
+  tiltz = event.orientation.z;
   imu::Vector<3> accel = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
   xaccel = accel.x();
   yaccel = accel.y();
   zaccel = accel.z();
-  tiltx = event.orientation.x;
-  tilty = event.orientation.y;
-  tiltz = event.orientation.z;
+
 }
 
 void  bmpRetrieve(void) {
   temp = bmp.readTemperature();
   pressure = bmp.readPressure();
-  altitude = bmp.readAltitude();
+  altitude = bmp.readAltitude(102438.26);
   //deltaH = altitude - heightOld;
   heightOld = bmp.readAltitude();
 }
 
 void GPSRetrieve(void) {
-  char c = GPS.read();
-  // if you want to debug, this is a good time to do it!
+    // read data from the GPS in the 'main loop'
+    char c = GPS.read();
+    // if you want to debug, this is a good time to do it!
+    if (GPSECHO)
+      if (c) Serial.print(c);
+  
+  
+  // if a sentence is received, we can check the checksum, parse it...
+  if (GPS.newNMEAreceived()) {
+    // a tricky thing here is if we print the NMEA sentence, or data
+    // we end up not listening and catching other sentences! 
+    // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
+    //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
+  
+  }
+   gpsalt = GPS.altitude;
+
 }
 
 //void apogeeDetect(void) {
@@ -188,20 +204,19 @@ void GPSRetrieve(void) {
 //}
 
 void transmit(void) {
-  Serial2.print("<");
-  Serial2.print(packetno); Serial2.print(",");
-  Serial2.print(altitude); Serial2.print(",");
-  Serial2.print(pressure); Serial2.print(",");
-  Serial2.print(temp); Serial2.print(",");
-  Serial2.print(xaccel); Serial2.print(",");
-  Serial2.print(yaccel); Serial2.print(",");
-  Serial2.print(zaccel); Serial2.print(",");
-  Serial2.print(tiltx); Serial2.print(",");
-  Serial2.print(tilty); Serial2.print(",");
-  Serial2.print(tilty); Serial2.print(",");
-  Serial2.print(GPS.minute + 1);
-  Serial2.println(">");
-  packetno = packetno + 1;
+  TransmitSerial.print("<");
+  TransmitSerial.print(packetno); TransmitSerial.print(",");
+  TransmitSerial.print(altitude); TransmitSerial.print(",");
+  TransmitSerial.print(pressure); TransmitSerial.print(",");
+  TransmitSerial.print(temp); TransmitSerial.print(",");
+  TransmitSerial.print(xaccel); TransmitSerial.print(",");
+  TransmitSerial.print(yaccel); TransmitSerial.print(",");
+  TransmitSerial.print(zaccel); TransmitSerial.print(",");
+  TransmitSerial.print(tiltx); TransmitSerial.print(",");
+  TransmitSerial.print(tilty); TransmitSerial.print(",");
+  TransmitSerial.print(tilty); TransmitSerial.print(",");
+  TransmitSerial.print(gpsalt); TransmitSerial.print(",");
+  TransmitSerial.println(">");
 }
 
 
@@ -216,8 +231,8 @@ void printing(void) {
   Serial.print(zaccel); Serial.print(",");
   Serial.print(tiltx); Serial.print(",");
   Serial.print(tilty); Serial.print(",");
-  Serial.print(tiltz);
-  Serial.print(GPS.minute + 1);
+  Serial.print(tiltz); Serial.print(",");
+  Serial.print(gpsalt);
   Serial.println(">");
 }
 
@@ -250,7 +265,8 @@ void datalog(void) {
 
   // if the file is available, write to it:
   if (dataFile) {
-    dataFile.print("<");
+     File dataFile = SD.open("datalog.txt", FILE_WRITE);
+    dataFile.print("\n<");
     dataFile.print(packetno); dataFile.print(",");
     dataFile.print(altitude); dataFile.print(",");
     dataFile.print(pressure); dataFile.print(",");
@@ -260,16 +276,21 @@ void datalog(void) {
     dataFile.print(zaccel); dataFile.print(",");
     dataFile.print(tiltx); dataFile.print(",");
     dataFile.print(tilty); dataFile.print(",");
-    dataFile.print(tiltz);
+    dataFile.print(tiltz); dataFile.print(",");
     dataFile.print(GPS.minute + 1);
-
     dataFile.close();
   }
 }
 
 void setup(void) {
   Serial.begin(9600);
-  Serial.println("Orientation Sensor Test"); Serial.println("");
+
+  if (!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while (1);
+  }
 
   if (!SD.begin(chipSelect)) {
     Serial.println("Card failed, or not present");
@@ -278,17 +299,14 @@ void setup(void) {
   }
   Serial.println("card initialized.");
 
+
+
   if (!bmp.begin()) {
     Serial.println("Could not find a valid BMP085 sensor, check wiring!");
     while (1) {}
   }
   /* Initialise the sensor */
-  if (!bno.begin())
-  {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while (1);
-  }
+
 
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(9600);
@@ -322,8 +340,8 @@ void setup(void) {
   Serial.println("Begin Transmission");
 
   //Setup XBEE line (Hardware Serial 2)
-  Serial2.begin(9600);
-  Serial2.println("Begin Transmission");
+  TransmitSerial.begin(9600);
+  TransmitSerial.println("Begin Transmission");
 
   //If using third arming transistor, uncomment the ARM pin declaration
   pinMode(ARM, OUTPUT);
@@ -367,6 +385,7 @@ void loop(void)
       transmit();
       printing();
       datalog();
+      packetno = packetno + 1;
 
       break;
     case kAscent: //Ascent state code block
