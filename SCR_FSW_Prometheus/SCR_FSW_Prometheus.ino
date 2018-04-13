@@ -25,7 +25,11 @@
 #include "SoftwareSerial.h"
 #include <Adafruit_GPS.h>
 #include <SPI.h>
+#include "Timer.h"
 #include <SD.h>
+
+
+Timer t;
 
 //Preprocessor Macro declarations
 #define BNO055_SAMPLERATE_DELAY_MS (100)
@@ -40,9 +44,9 @@ enum FSWState {
 };
 
 FSWState state = kStandby;
-
+  
 int packetno = 1;
-float pressure, altitude, temp, tiltx, tilty, tiltz, xaccel, yaccel, zaccel, h1, h2, gpsalt;
+float pressure, altitude, gpsalt, temp, tiltx, tilty, tiltz, xaccel, yaccel, zaccel, h1, h2, deltaH, baselineAccel;
 int incomingByte = 0;
 float heightOld = 0;
 int StandbyFlag, AscentFlag, DescentFlag, RecoveryFlag, buzzpin;
@@ -50,11 +54,13 @@ int startupFlag = 1;
 int EjectionFlag[1];
 int i = 0;
 int AccelCalibration;
-
-
+int time1,time2;
+int stateno = 1;
 int ARM = 2; //Arming pin set
 int EVENT_1_PIN = 3; //Pin set for Event 1, drogue deployment
 int EVENT_2_PIN = 4; //Pin set for Event 2, main deployment
+
+
 
 
 //int BMPCheck;
@@ -66,80 +72,17 @@ float GPSStorage[3];
 float AccelStorage[3];
 //int deltaH;
 
-SoftwareSerial TransmitSerial(2, 3); // RX, TX
-//SoftwareSerial GPSSerial(5, 4);
+SoftwareSerial mySerial(11, 10);
+Adafruit_GPS GPS(&Serial1);
 
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 Adafruit_BMP085 bmp;
-Adafruit_GPS GPS(&Serial1);
 
 #define GPSECHO  true
 
 //Flag to indicate if an interrupt was detected
 bool intDetected = false;
-
-void displaySensorDetails(void)
-{
-  sensor_t sensor;
-  bno.getSensor(&sensor);
-  Serial.println("------------------------------------");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" xxx");
-  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" xxx");
-  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" xxx");
-  Serial.println("------------------------------------");
-  Serial.println("");
-  delay(500);
-}
-
-void displaySensorStatus(void)
-{
-  /* Get the system status values (mostly for debugging purposes) */
-  uint8_t system_status, self_test_results, system_error;
-  system_status = self_test_results = system_error = 0;
-  bno.getSystemStatus(&system_status, &self_test_results, &system_error);
-
-  /* Display the results in the Serial Monitor */
-  Serial.println("");
-  Serial.print("System Status: 0x");
-  Serial.println(system_status, HEX);
-  Serial.print("Self Test:     0x");
-  Serial.println(self_test_results, HEX);
-  Serial.print("System Error:  0x");
-  Serial.println(system_error, HEX);
-  Serial.println("");
-  delay(500);
-}
-
-void displayCalStatus(void)
-{
-  /* Get the four calibration values (0..3) */
-  /* Any sensor data reporting 0 should be ignored, */
-  /* 3 means 'fully calibrated" */
-  uint8_t system, gyro, accel, mag;
-  system = gyro = accel = mag = 0;
-  bno.getCalibration(&system, &gyro, &accel, &mag);
-
-  /* The data should be ignored until the system calibration is > 0 */
-  Serial.print("\t");
-  if (!system)
-  {
-    Serial.print("! ");
-  }
-
-  /* Display the individual values */
-  Serial.print("Sys:");
-  Serial.print(system, DEC);
-  Serial.print(" G:");
-  Serial.print(gyro, DEC);
-  Serial.print(" A:");
-  Serial.print(accel, DEC);
-  Serial.print(" M:");
-  Serial.print(mag, DEC);
-}
 
 void imuRetrieve(void) {
   delay(BNO055_SAMPLERATE_DELAY_MS);
@@ -153,17 +96,28 @@ void imuRetrieve(void) {
   yaccel = accel.y();
   zaccel = accel.z();
 
+  if (startupFlag == 1){
+     baselineAccel = accel.z();
+     Serial.print(baselineAccel);
+  }
+
 }
 
 void  bmpRetrieve(void) {
   temp = bmp.readTemperature();
   pressure = bmp.readPressure();
   altitude = bmp.readAltitude(102438.26);
-  //deltaH = altitude - heightOld;
+  deltaH = altitude - heightOld;
   heightOld = bmp.readAltitude();
 }
 
 void GPSRetrieve(void) {
+// <<<<<<< Moving-code-to-functions
+//     // read data from the GPS in the 'main loop'
+//     char c = GPS.read();
+//     // if you want to debug, this is a good time to do it!
+  
+// =======
   // read data from the GPS in the 'main loop'
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
@@ -171,42 +125,48 @@ void GPSRetrieve(void) {
     if (c) Serial.print(c);
 
 
+// >>>>>>> testing
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
     // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
     //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
+// <<<<<<< Moving-code-to-functions
+  
+//     if (!GPS.parse(GPS.lastNMEA())){   // this also sets the newNMEAreceived() flag to false
+//       return;  // we can fail to parse a sentence in which case we should just wait for another
+//   }
+// =======
     if (!GPS.parse(GPS.lastNMEA())) {  // this also sets the newNMEAreceived() flag to false
       Serial.println("Parse Unsuccessful");
       return;  // we can fail to parse a sentence in which case we should just wait for another
     }
   }
   gpsalt = GPS.altitude;
+//>>>>>>> testing
 
+  
+ //int gpsalt = GPS.altitude;
+  }
 }
 
-//void apogeeDetect(void) {
+/*void apogeeDetect(void) {
 
-//BMPCheck = 1 / (deltaH + 1); //Baro
-//IMUCheck = 9.81 / accel // IMU
-//GPSCheck = 1/(deltaH+1); //GPS
+BMPCheck = 1 / (deltaH + 1); //Baro
+IMUCheck = 9.81 / accel // IMU
+GPSCheck = 1/(deltaH+1); //GPS
 
-//   TotalCheck = sqrt(BMPCheck ^ 2 + IMUCheck ^ 2 + GPSCheck ^ 2) * 100;
-/*  if ( TotalCheck = ! 300 || TotalCheck = ! 325 || TotalCheck = ! 275) {}
+   TotalCheck = sqrt(BMPCheck ^ 2 + IMUCheck ^ 2 + GPSCheck ^ 2) * 100;
+  if ( TotalCheck = ! 300 || TotalCheck = ! 325 || TotalCheck = ! 275) {}
   if (TotalCheck == 300 || TotalCheck == 325 || TotalCheck == 275) {
-    /* Remove Later
-      AscentFlag = 0;
-      DescentFlag = 1;
-*/
-/*   state = kDescent; //Change state to Descent
+  
+   state = kDescent; //Change state to Descent
    int ApogeeH = altitude;
-   Serial.println(DescentFlag);
-   Serial.println(ApogeeH); */
-// }
-//}
+ }
+}*/
 
-void transmit(void) {
+/*void transmit(void) {
   TransmitSerial.print("<");
   TransmitSerial.print(packetno); TransmitSerial.print(",");
   TransmitSerial.print(altitude); TransmitSerial.print(",");
@@ -219,8 +179,9 @@ void transmit(void) {
   TransmitSerial.print(tilty); TransmitSerial.print(",");
   TransmitSerial.print(tilty); TransmitSerial.print(",");
   TransmitSerial.print(gpsalt); TransmitSerial.print(",");
+  TransmitSerial.print(state); TransmitSerial.print(",");
   TransmitSerial.println(">");
-}
+}*/
 
 
 void printing(void) {
@@ -235,7 +196,7 @@ void printing(void) {
   Serial.print(tiltx); Serial.print(",");
   Serial.print(tilty); Serial.print(",");
   Serial.print(tiltz); Serial.print(",");
-  Serial.print(gpsalt);
+  Serial.println(stateno);Serial.print(",");
   Serial.println(">");
 }
 
@@ -334,17 +295,15 @@ void setup(void) {
   pinMode(13, OUTPUT);
 
   /* Display some basic information on this sensor */
-  displaySensorDetails();
 
   /* Optional: Display current status */
-  displaySensorStatus();
 
   bno.setExtCrystalUse(true);
   Serial.println("Begin Transmission");
 
   //Setup XBEE line (Hardware Serial 2)
-  TransmitSerial.begin(9600);
-  TransmitSerial.println("Begin Transmission");
+//  TransmitSerial.begin(9600);
+//  TransmitSerial.println("Begin Transmission");
 
   //If using third arming transistor, uncomment the ARM pin declaration
   pinMode(ARM, OUTPUT);
@@ -358,69 +317,80 @@ void setup(void) {
   digitalWrite(buzzpin, LOW);
 
   int AccelFlag = 0;
+  t.every(500, MainFunction);
+
 }
 
 
-void buzzer(void) {
+/*void buzzer(void) {
   if (startupFlag = 1) {
     for (int k = 1; k < 10; k++) {
       digitalWrite(buzzpin, HIGH); //no time spacing?
+      delay(100);
       digitalWrite(buzzpin, LOW);
+      
     }
   }
   for (int k = 1; k < 10; k++) {
     digitalWrite(buzzpin, HIGH);
+    delay(100);
     digitalWrite(buzzpin, LOW);
   }
 
+}*/
+void loop(void){t.update();}
+
+
+void detectAscent(void){
+   
+  //look at accelerometer data and delta h data, if accelerometer is above the baseline, then change state to ascent. 
+  if((zaccel - baselineAccel > .5) && (deltaH > 0)){
+    state = kAscent;
+    stateno = 2;
+  }
+  
 }
-void loop(void)
-{
+void MainFunction(void){
   if (startupFlag = 1) {
-    buzzer();
+//    buzzer();
+   imuRetrieve();
+   bmpRetrieve();
     startupFlag = 0;
   }
 
   switch (state) {
     case kStandby: //Standby state code block
+      time1 = millis();
       imuRetrieve();
       bmpRetrieve();
-      transmit();
+      detectAscent();
+      GPSRetrieve();
+      //transmit();
       printing();
       datalog();
       packetno = packetno + 1;
-
+      time2 = millis()-time1;
+      Serial.print(time2);
       break;
     case kAscent: //Ascent state code block
-      imuRetrieve();
-      bmpRetrieve();
-      transmit();
+  //    imuRetrieve();
+ //     bmpRetrieve();
+//      transmit();
       // apogeeDetect();
       break;
     case kDescent: //Descent state code block
-      imuRetrieve();
-      bmpRetrieve();
-      transmit();
+ //     imuRetrieve();
+ //     bmpRetrieve();
+ //     transmit();
       //      ejection();
       break;
     case kRecovery: //Recovery state code block
-      imuRetrieve();
-      bmpRetrieve();
-      transmit();
+ //     imuRetrieve();
+ //     bmpRetrieve();
+ //     transmit();
       delay(10000);
       break;
   }
-
-  // Artefact?
-  //  if (Serial.available() > 0) {
-  //    incomingByte = Serial.read();
-  //  }
-  //  if (incomingByte != 0) {
-  //    digitalWrite(6, HIGH);
-  //    delay(500);
-  //    digitalWrite(6, LOW);
-  //  }
-
 
 }
 //}
