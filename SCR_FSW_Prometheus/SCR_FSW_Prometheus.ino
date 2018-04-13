@@ -112,23 +112,42 @@ void  bmpRetrieve(void) {
 }
 
 void GPSRetrieve(void) {
-    // read data from the GPS in the 'main loop'
-    char c = GPS.read();
-    // if you want to debug, this is a good time to do it!
+// <<<<<<< Moving-code-to-functions
+//     // read data from the GPS in the 'main loop'
+//     char c = GPS.read();
+//     // if you want to debug, this is a good time to do it!
   
+// =======
+  // read data from the GPS in the 'main loop'
+  char c = GPS.read();
+  // if you want to debug, this is a good time to do it!
+  if (GPSECHO)
+    if (c) Serial.print(c);
+
+
+// >>>>>>> testing
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
-    // we end up not listening and catching other sentences! 
+    // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
     //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
+// <<<<<<< Moving-code-to-functions
   
-    if (!GPS.parse(GPS.lastNMEA())){   // this also sets the newNMEAreceived() flag to false
+//     if (!GPS.parse(GPS.lastNMEA())){   // this also sets the newNMEAreceived() flag to false
+//       return;  // we can fail to parse a sentence in which case we should just wait for another
+//   }
+// =======
+    if (!GPS.parse(GPS.lastNMEA())) {  // this also sets the newNMEAreceived() flag to false
+      Serial.println("Parse Unsuccessful");
       return;  // we can fail to parse a sentence in which case we should just wait for another
+    }
   }
+  gpsalt = GPS.altitude;
+//>>>>>>> testing
 
   
- int gpsalt = GPS.altitude;
+ //int gpsalt = GPS.altitude;
   }
 }
 
@@ -210,7 +229,7 @@ void datalog(void) {
 
   // if the file is available, write to it:
   if (dataFile) {
-     File dataFile = SD.open("datalog.txt", FILE_WRITE);
+    File dataFile = SD.open("datalog.txt", FILE_WRITE);
     dataFile.print("\n<");
     dataFile.print(packetno); dataFile.print(",");
     dataFile.print(altitude); dataFile.print(",");
