@@ -25,7 +25,7 @@
 #include "SoftwareSerial.h"
 #include <Adafruit_GPS.h>
 #include <SPI.h>
-#include "Timer.h"
+#include <Timer.h>
 #include <SD.h>
 
 
@@ -44,7 +44,7 @@ enum FSWState {
 };
 
 FSWState state = kStandby;
-  
+
 int packetno = 1;
 float pressure, altitude, gpsalt, temp, tiltx, tilty, tiltz, xaccel, yaccel, zaccel, h1, h2, deltaH, baselineAccel;
 int incomingByte = 0;
@@ -54,7 +54,7 @@ int startupFlag = 1;
 int EjectionFlag[1];
 int i = 0;
 int AccelCalibration;
-int time1,time2;
+int time1, time2;
 int stateno = 1;
 int ARM = 2; //Arming pin set
 int EVENT_1_PIN = 3; //Pin set for Event 1, drogue deployment
@@ -96,9 +96,9 @@ void imuRetrieve(void) {
   yaccel = accel.y();
   zaccel = accel.z();
 
-  if (startupFlag == 1){
-     baselineAccel = accel.z();
-     Serial.print(baselineAccel);
+  if (startupFlag == 1) {
+    baselineAccel = accel.z();
+    Serial.print(baselineAccel);
   }
 
 }
@@ -112,12 +112,12 @@ void  bmpRetrieve(void) {
 }
 
 void GPSRetrieve(void) {
-// <<<<<<< Moving-code-to-functions
-//     // read data from the GPS in the 'main loop'
-//     char c = GPS.read();
-//     // if you want to debug, this is a good time to do it!
-  
-// =======
+  // <<<<<<< Moving-code-to-functions
+  //     // read data from the GPS in the 'main loop'
+  //     char c = GPS.read();
+  //     // if you want to debug, this is a good time to do it!
+
+  // =======
   // read data from the GPS in the 'main loop'
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
@@ -125,46 +125,46 @@ void GPSRetrieve(void) {
     if (c) Serial.print(c);
 
 
-// >>>>>>> testing
+  // >>>>>>> testing
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
     // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
     //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
-// <<<<<<< Moving-code-to-functions
-  
-//     if (!GPS.parse(GPS.lastNMEA())){   // this also sets the newNMEAreceived() flag to false
-//       return;  // we can fail to parse a sentence in which case we should just wait for another
-//   }
-// =======
+    // <<<<<<< Moving-code-to-functions
+
+    //     if (!GPS.parse(GPS.lastNMEA())){   // this also sets the newNMEAreceived() flag to false
+    //       return;  // we can fail to parse a sentence in which case we should just wait for another
+    //   }
+    // =======
     if (!GPS.parse(GPS.lastNMEA())) {  // this also sets the newNMEAreceived() flag to false
       Serial.println("Parse Unsuccessful");
       return;  // we can fail to parse a sentence in which case we should just wait for another
     }
   }
   gpsalt = GPS.altitude;
-//>>>>>>> testing
+  //>>>>>>> testing
 
-  
- //int gpsalt = GPS.altitude;
-  }
+
+  //int gpsalt = GPS.altitude;
 }
+
 
 /*void apogeeDetect(void) {
 
-BMPCheck = 1 / (deltaH + 1); //Baro
-IMUCheck = 9.81 / accel // IMU
-GPSCheck = 1/(deltaH+1); //GPS
+  BMPCheck = 1 / (deltaH + 1); //Baro
+  IMUCheck = 9.81 / accel // IMU
+  GPSCheck = 1/(deltaH+1); //GPS
 
    TotalCheck = sqrt(BMPCheck ^ 2 + IMUCheck ^ 2 + GPSCheck ^ 2) * 100;
   if ( TotalCheck = ! 300 || TotalCheck = ! 325 || TotalCheck = ! 275) {}
   if (TotalCheck == 300 || TotalCheck == 325 || TotalCheck == 275) {
-  
+
    state = kDescent; //Change state to Descent
    int ApogeeH = altitude;
- }
-}*/
+  }
+  }*/
 
 /*void transmit(void) {
   TransmitSerial.print("<");
@@ -181,7 +181,7 @@ GPSCheck = 1/(deltaH+1); //GPS
   TransmitSerial.print(gpsalt); TransmitSerial.print(",");
   TransmitSerial.print(state); TransmitSerial.print(",");
   TransmitSerial.println(">");
-}*/
+  }*/
 
 
 void printing(void) {
@@ -196,7 +196,7 @@ void printing(void) {
   Serial.print(tiltx); Serial.print(",");
   Serial.print(tilty); Serial.print(",");
   Serial.print(tiltz); Serial.print(",");
-  Serial.println(stateno);Serial.print(",");
+  Serial.println(stateno); Serial.print(",");
   Serial.println(">");
 }
 
@@ -302,8 +302,8 @@ void setup(void) {
   Serial.println("Begin Transmission");
 
   //Setup XBEE line (Hardware Serial 2)
-//  TransmitSerial.begin(9600);
-//  TransmitSerial.println("Begin Transmission");
+  //  TransmitSerial.begin(9600);
+  //  TransmitSerial.println("Begin Transmission");
 
   //If using third arming transistor, uncomment the ARM pin declaration
   pinMode(ARM, OUTPUT);
@@ -328,7 +328,7 @@ void setup(void) {
       digitalWrite(buzzpin, HIGH); //no time spacing?
       delay(100);
       digitalWrite(buzzpin, LOW);
-      
+
     }
   }
   for (int k = 1; k < 10; k++) {
@@ -337,24 +337,26 @@ void setup(void) {
     digitalWrite(buzzpin, LOW);
   }
 
-}*/
-void loop(void){t.update();}
+  }*/
+void loop(void) {
+  t.update();
+}
 
 
-void detectAscent(void){
-   
-  //look at accelerometer data and delta h data, if accelerometer is above the baseline, then change state to ascent. 
-  if((zaccel - baselineAccel > .5) && (deltaH > 0)){
+void detectAscent(void) {
+
+  //look at accelerometer data and delta h data, if accelerometer is above the baseline, then change state to ascent.
+  if ((zaccel - baselineAccel > .5) && (deltaH > 0)) {
     state = kAscent;
     stateno = 2;
   }
-  
+
 }
-void MainFunction(void){
+void MainFunction(void) {
   if (startupFlag = 1) {
-//    buzzer();
-   imuRetrieve();
-   bmpRetrieve();
+    //    buzzer();
+    imuRetrieve();
+    bmpRetrieve();
     startupFlag = 0;
   }
 
@@ -369,25 +371,25 @@ void MainFunction(void){
       printing();
       datalog();
       packetno = packetno + 1;
-      time2 = millis()-time1;
+      time2 = millis() - time1;
       Serial.print(time2);
       break;
     case kAscent: //Ascent state code block
-  //    imuRetrieve();
- //     bmpRetrieve();
-//      transmit();
+      //    imuRetrieve();
+      //     bmpRetrieve();
+      //      transmit();
       // apogeeDetect();
       break;
     case kDescent: //Descent state code block
- //     imuRetrieve();
- //     bmpRetrieve();
- //     transmit();
+      //     imuRetrieve();
+      //     bmpRetrieve();
+      //     transmit();
       //      ejection();
       break;
     case kRecovery: //Recovery state code block
- //     imuRetrieve();
- //     bmpRetrieve();
- //     transmit();
+      //     imuRetrieve();
+      //     bmpRetrieve();
+      //     transmit();
       delay(10000);
       break;
   }
