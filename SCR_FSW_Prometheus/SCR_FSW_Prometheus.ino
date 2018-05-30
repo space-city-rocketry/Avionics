@@ -34,7 +34,7 @@ Timer t;
 //Preprocessor Macro declarations
 #define BNO055_SAMPLERATE_DELAY_MS (100)
 
-const int chipSelect = 53;
+const int chipSelect = BUILTIN_SDCARD;
 enum FSWState {
   kStandby,
   kAscent,
@@ -72,9 +72,9 @@ float GPSStorage[3];
 float AccelStorage[3];
 //int deltaH;
 
-SoftwareSerial mySerial(11, 10);
-Adafruit_GPS GPS(&Serial1);
-
+//SoftwareSerial mySerial(11, 10);
+Adafruit_GPS GPS(&Serial2);
+#define TransmitSerial Serial1
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 Adafruit_BMP085 bmp;
@@ -166,7 +166,7 @@ void GPSRetrieve(void) {
   }
   }*/
 
-/*void transmit(void) {
+void transmit(void) {
   TransmitSerial.print("<");
   TransmitSerial.print(packetno); TransmitSerial.print(",");
   TransmitSerial.print(altitude); TransmitSerial.print(",");
@@ -181,7 +181,7 @@ void GPSRetrieve(void) {
   TransmitSerial.print(gpsalt); TransmitSerial.print(",");
   TransmitSerial.print(state); TransmitSerial.print(",");
   TransmitSerial.println(">");
-  }*/
+  }
 
 
 void printing(void) {
@@ -253,7 +253,7 @@ void setup(void) {
   {
     /* There was a problem detecting the BNO055 ... check your connections */
     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while (1);
+    //while (1);
   }
 
   if (!SD.begin(chipSelect)) {
@@ -267,7 +267,7 @@ void setup(void) {
 
   if (!bmp.begin()) {
     Serial.println("Could not find a valid BMP085 sensor, check wiring!");
-    while (1) {}
+    //while (1) {}
   }
   /* Initialise the sensor */
 
@@ -302,8 +302,8 @@ void setup(void) {
   Serial.println("Begin Transmission");
 
   //Setup XBEE line (Hardware Serial 2)
-  //  TransmitSerial.begin(9600);
-  //  TransmitSerial.println("Begin Transmission");
+    TransmitSerial.begin(9600);
+    TransmitSerial.println("Begin Transmission");
 
   //If using third arming transistor, uncomment the ARM pin declaration
   pinMode(ARM, OUTPUT);
@@ -369,7 +369,7 @@ void MainFunction(void) {
       GPSRetrieve();
       //transmit();
       printing();
-      datalog();
+      //datalog();
       packetno = packetno + 1;
       time2 = millis() - time1;
       Serial.print(time2);
