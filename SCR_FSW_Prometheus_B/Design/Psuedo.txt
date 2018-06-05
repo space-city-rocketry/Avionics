@@ -1,0 +1,109 @@
+/*
+
+PSUEDO CODE FOR PROMETHEUS FSW BETA
+
+*/
+
+#include <Lib>
+
+Define global variables
+
+CDH cdh
+FlightLogic prometheus
+
+setup()
+{
+	init CDH, FlightLogic
+}
+
+loop()
+{
+	state = stateCheck()
+	switch(state)
+	{
+		case Standby:
+			Standby()
+		case Ascent:
+			Ascent()
+		case Descent:
+			Descent()
+		case Recovery:
+			Recovery()
+	}
+}
+
+stateCheck()
+{
+	state check code
+}
+
+Standby()
+{
+	debug, testing, etc
+}
+
+Ascent()
+{
+	cdh.flight()
+	prometheus.launchDetect()
+	prometheus.apogeeDetect()
+}
+
+Descent()
+{
+	cdh.flight()
+	prometheus.mainDetect()
+	prometheus.landingDetect()
+}
+
+Recovery()
+{
+	cdh.recovery()
+}
+
+__________________________END FILE_______________________________
+
+__________________________CDH START______________________________
+
+class CDH 
+{
+	public:
+		//variables:
+		[BMP180 Data Variables]
+		[BNO055 Data Variables]
+		String GPSSTRING
+		String lastGPSSTRING
+		
+		//methods:
+		CDH()
+		void init()
+		
+		void flight()
+		void recovery()
+		
+		void readBMP180()
+		void readBNO055()
+		void readGPS()
+		void readRTC()
+		
+		void Log()
+		void Transmit()
+		
+}
+
+
+__________________________END FILE_______________________________
+
+______________________FLIGHTLOGIC START__________________________
+
+class FlightLogic
+{
+	bool launchDetect()
+	bool apogeeDetect()
+	bool mainDetect()
+	bool landingDetect()
+}
+
+
+__________________________END FILE_______________________________
+
