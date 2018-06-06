@@ -40,3 +40,13 @@ void CDH::readRTC()
   //RTC code
 }
 
+void CDH::Log()
+{
+  //Data logging
+}
+
+void CDH:Transmit()
+{
+  //Data transmission
+}
+

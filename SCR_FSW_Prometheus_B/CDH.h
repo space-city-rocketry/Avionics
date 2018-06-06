@@ -9,6 +9,9 @@
 #include <TinyGPS.h>
 #include <TimeLib.h>
 
+#define XBEE Serial1
+#define GPS Serial2
+
 class CDH
 {
   public:
@@ -21,17 +24,26 @@ class CDH
     Adafruit_BMP085 bmp;
     TinyGPS gps
 
+    //Detections
+    bool launch = false;
+    bool apogee = false;
+    bool main = false;
+    bool landing = false;
+
     //functions:
-    CDH()
-    void init()
+    CDH();
+    void init();
     
-    void flight()
-    void recovery()
+    void flight();
+    void recovery();
     
-    void readBMP180()
-    void readBNO055()
-    void readGPS()
-    void readRTC()
+    void readBMP180();
+    void readBNO055();
+    void readGPS();
+    void readRTC();
+
+    void Log();
+    void Transmit();
 }
 
 

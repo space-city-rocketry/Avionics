@@ -34,7 +34,7 @@ loop()
 
 stateCheck()
 {
-	state check code
+	Access EEPROM for state variable
 }
 
 Standby()
@@ -45,15 +45,21 @@ Standby()
 Ascent()
 {
 	cdh.flight()
-	prometheus.launchDetect()
-	prometheus.apogeeDetect()
+	if(prometheus.launchDetect()):
+		log detection
+	if(prometheus.apogeeDetect()): 
+		log detection
+		state = Descent
 }
 
 Descent()
 {
 	cdh.flight()
-	prometheus.mainDetect()
-	prometheus.landingDetect()
+	if(prometheus.mainDetect()):
+		log detection
+	if(prometheus.landingDetect()):
+		log detection
+		state = Recovery
 }
 
 Recovery()
@@ -79,7 +85,19 @@ class CDH
 		void init()
 		
 		void flight()
+		{
+			readBMP180()
+			readBNO055()
+			readGPS()
+			readRTC()
+			Log()
+			Transmit()
+		}
 		void recovery()
+		{
+			readGPS()
+			Transmit()
+		}
 		
 		void readBMP180()
 		void readBNO055()
