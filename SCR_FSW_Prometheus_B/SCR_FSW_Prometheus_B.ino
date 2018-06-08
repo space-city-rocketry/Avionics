@@ -22,6 +22,7 @@ enum FlightState {
 FlightState state = Standby; //Save to EEPROM 
 
 void setup() {
+  Serial.begin(115200);
   cdh.init();
   //if necessary:
   //prometheus.init(); 
@@ -81,6 +82,7 @@ void Descent()
   {
     cdh.landing = true;
     state = Recovery; 
+    //set slower timer rate
   }
 }
 

@@ -6,8 +6,18 @@ CDH::CDH()
 void CDH::init()
 {
   //CDH initialization
-  bmp.begin()
-  bno.begin()
+  // set the Time library to use Teensy 3.0's RTC to keep time
+  setSyncProvider(getTeensy3Time);
+  if (timeStatus() != timeSet) {
+    Serial.println("Unable to sync with the RTC");
+  } else {
+    Serial.println("RTC has set the system time");
+  }
+  bmp.begin();
+  bno.begin();
+  XBEE.begin(9600);
+  GPS.begin(9600);
+  GPS.println(PMTK_SET_NMEA_OUTPUT_RMCGGA); //Send GPS setup command
 }
 
 void CDH::flight()
@@ -22,7 +32,7 @@ void CDH::recovery()
 
 void CDH::readBMP180()
 {
-  //BMP180 code 
+  //BMP180 code
 }
 
 void CDH::readBNO055()
@@ -45,7 +55,7 @@ void CDH::Log()
   //Data logging
 }
 
-void CDH:Transmit()
+void CDH: Transmit()
 {
   //Data transmission
 }
