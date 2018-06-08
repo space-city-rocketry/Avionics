@@ -1,16 +1,23 @@
 #include "CDH.h"
 #include "FlightLogic.h"
 #include <EEPROM.h>
+#include <Timer.h>
 
 #define DEBUG
 #if defined DEBUG
   #define debugln(a) (Serial.println(a))
+  #define debug(a) (Serial.print(a))
 #else
   #define debugln(a)
+  #define debug(a)
 #endif
+
+
 
 CDH cdh;
 FlightLogic prometheus;
+
+Timer t;
 
 enum FlightState {
   Standby,
@@ -21,50 +28,71 @@ enum FlightState {
 
 FlightState state = Standby; //Save to EEPROM 
 
+time_t getTeensy3Time() //RTC function
+{
+  return Teensy3Clock.get();
+}
+
 void setup() {
+  setSyncProvider(getTeensy3Time);
+  
   Serial.begin(115200);
   cdh.init();
   //if necessary:
   //prometheus.init(); 
-  Serial.begin(115200);
+  //Serial.println("Testing");
   debugln("Debug ON");
+
+  t.every(10, FlightControl);
 }
 
 void loop() {
+  t.update();
+  
+}
+
+void FlightControl()
+{
+  //debugln("Loop");
   state = stateCheck();
   switch(state)
   {
     case Standby:
-      Standby();
+      standby();
+      //debugln("standby");
       break;
     case Ascent:
-      Ascent();
+      ascent();
+      debugln("ascent");
       break;
     case Descent:
-      Descent();
+      descent();
+      debugln("descent");
       break;
     case Recovery:
-      Recovery();
+      recovery();
+      debugln("recovery");
       break;
   }
-
 }
 
-int stateCheck()
+FlightState stateCheck()
 {
   //EEPROM access?
   //Make sure that previous detections were not false
 }
 
-void Standby()
+void standby()
 {
   //Ground testing code. TBD
+  cdh.standby();
+  
 }
 
-void Ascent()
+void ascent()
 {
   cdh.flight();
-  if(prometheus.launchDetect())
+  if(prometheus.launchDetect(cdh.accelx))
     cdh.launch = true;
   if(prometheus.apogeeDetect())
   {
@@ -73,7 +101,7 @@ void Ascent()
   }
 }
 
-void Descent()
+void descent()
 {
   cdh.flight();
   if(prometheus.mainDetect())
@@ -86,7 +114,7 @@ void Descent()
   }
 }
 
-void Recovery()
+void recovery()
 {
   cdh.recovery();
 }

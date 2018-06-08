@@ -1,11 +1,12 @@
 #include "Arduino.h"
 #include "FlightLogic.h"
 
-FlightLogic::FlightLogic()
+FlightLogic::FlightLogic(){}
 
 bool FlightLogic::launchDetect()
 {
   //Insert launch detect code here
+  accelx 
 }
 
 bool FlightLogic::apogeeDetect()

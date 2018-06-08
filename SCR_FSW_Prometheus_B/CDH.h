@@ -9,6 +9,15 @@
 #include <TinyGPS.h>
 #include <TimeLib.h>
 
+#define DEBUG
+#if defined DEBUG
+  #define debugln(a) (Serial.println(a))
+  #define debug(a) (Serial.print(a))
+#else
+  #define debugln(a)
+  #define debug(a)
+#endif
+
 #define XBEE Serial1
 #define GPS Serial2
 
@@ -19,13 +28,18 @@ class CDH
 {
   public:
     //BMP180 data variables:
-    //example: int bmpAltitude;
+    float bmpAltitude;
+    float bmpPressure;
+    float bmpTemp;
+    float deltaH, AltOld;
     //BNO055 data variables:
+    float tiltx, tilty, tiltz;
+    float accelx, accely, accelz;
 
     //other data variables/objects:
     Adafruit_BNO055 bno = Adafruit_BNO055(55);
     Adafruit_BMP085 bmp;
-    TinyGPS gps
+    TinyGPS gps;
 
     //Detections
     bool launch = false;
@@ -37,6 +51,7 @@ class CDH
     CDH();
     void init();
 
+    void standby();
     void flight();
     void recovery();
 
@@ -48,28 +63,15 @@ class CDH
     void Log();
     void Transmit();
 
-    time_t getTeensy3Time() //RTC function
-    {
-      return Teensy3Clock.get();
-    }
+    void disp();
+    void plotTilt();
 
-    /*  code to process time sync messages from the serial port   */
+    time_t getTeensy3Time(); //RTC function
+
+    unsigned long processSyncMessage(); 
 
 
-    unsigned long processSyncMessage() {
-      unsigned long pctime = 0L;
-      const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
-
-      if (Serial.find(TIME_HEADER)) {
-        pctime = Serial.parseInt();
-        return pctime;
-        if ( pctime < DEFAULT_TIME) { // check the value is a valid time (greater than Jan 1 2013)
-          pctime = 0L; // return 0 to indicate that the time is not valid
-        }
-      }
-      return pctime;
-    }
-}
+};
 
 
 
