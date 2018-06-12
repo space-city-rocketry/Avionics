@@ -8,21 +8,28 @@
 #include <Wire.h>
 #include <TinyGPS.h>
 #include <TimeLib.h>
+#include <Timer.h>
 
 #define DEBUG
 #if defined DEBUG
-  #define debugln(a) (Serial.println(a))
-  #define debug(a) (Serial.print(a))
+#define debugln(a) (Serial.println(a))
+#define debug(a) (Serial.print(a))
 #else
-  #define debugln(a)
-  #define debug(a)
+#define debugln(a)
+#define debug(a)
 #endif
 
 #define XBEE Serial1
 #define GPS Serial2
 
+
 #define TIME_HEADER  "T"   // Header tag for serial time sync message
 #define PMTK_SET_NMEA_OUTPUT_RMCGGA "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28"
+
+#define XBEEp(a) XBEE.print(a)
+#define XBEEpln(a) XBEE.println(a)
+
+
 
 class CDH
 {
@@ -35,6 +42,22 @@ class CDH
     //BNO055 data variables:
     float tiltx, tilty, tiltz;
     float accelx, accely, accelz;
+
+    //RTC
+    unsigned long METStart;
+    unsigned long MET;
+
+    //GPS
+    unsigned long GPSsync;
+    int GPS_timeout = 100;
+    bool GPS_ON = true;
+    long GPSTime;
+    float GPSLat;
+    float GPSLong;
+    float GPSAlt;
+    int GPSSats;
+    bool newData; //GPS new data check
+    unsigned long fix_age; //GPS fix age check
 
     //other data variables/objects:
     Adafruit_BNO055 bno = Adafruit_BNO055(55);
@@ -58,6 +81,7 @@ class CDH
     void readBMP180();
     void readBNO055();
     void readGPS();
+    void syncGPS(Timer t);
     void readRTC();
 
     void Log();
@@ -68,7 +92,7 @@ class CDH
 
     time_t getTeensy3Time(); //RTC function
 
-    unsigned long processSyncMessage(); 
+    unsigned long processSyncMessage();
 
 
 };

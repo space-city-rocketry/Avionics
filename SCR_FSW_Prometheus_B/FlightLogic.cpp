@@ -6,7 +6,7 @@ FlightLogic::FlightLogic(){}
 bool FlightLogic::launchDetect()
 {
   //Insert launch detect code here
-  accelx 
+  
 }
 
 bool FlightLogic::apogeeDetect()

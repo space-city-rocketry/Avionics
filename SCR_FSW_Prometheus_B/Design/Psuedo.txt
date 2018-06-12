@@ -7,6 +7,8 @@ PSUEDO CODE FOR PROMETHEUS FSW BETA
 #include <Lib>
 
 Define global variables
+Timer t //if using Timer.h
+elapsedMillis GPSsync;
 
 CDH cdh
 FlightLogic prometheus
@@ -14,23 +16,42 @@ FlightLogic prometheus
 setup()
 {
 	init CDH, FlightLogic
+	
+	t.every([datarate], FlightControl) //if using Timer.h
+	
 }
 
 loop()
 {
+	if(!program_start)
+	{
+		GPSsync = 0;
+	}
+	if(GPSsync > 1000)
+	{
+		readGPS();
+		GPSsync = 0;
+	}
+	t.update()
+}
+
+FlightControl()
+{
 	state = stateCheck()
 	switch(state)
 	{
-		case Standby:
-			Standby()
-		case Ascent:
-			Ascent()
-		case Descent:
-			Descent()
-		case Recovery:
-			Recovery()
+	case Standby:
+		Standby()
+	case Ascent:
+		Ascent()
+	case Descent:
+		Descent()
+	case Recovery:
+		Recovery()
 	}
 }
+
+
 
 stateCheck()
 {
@@ -46,20 +67,20 @@ Ascent()
 {
 	cdh.flight()
 	if(prometheus.launchDetect()):
-		log detection
+	log detection
 	if(prometheus.apogeeDetect()): 
-		log detection
-		state = Descent
+	log detection
+	state = Descent
 }
 
 Descent()
 {
 	cdh.flight()
 	if(prometheus.mainDetect()):
-		log detection
+	log detection
 	if(prometheus.landingDetect()):
-		log detection
-		state = Recovery
+	log detection
+	state = Recovery
 }
 
 Recovery()
@@ -73,40 +94,67 @@ __________________________CDH START______________________________
 
 class CDH 
 {
-	public:
-		//variables:
-		[BMP180 Data Variables]
-		[BNO055 Data Variables]
-		String GPSSTRING
-		String lastGPSSTRING
-		
-		//methods:
-		CDH()
-		void init()
-		
-		void flight()
-		{
-			readBMP180()
-			readBNO055()
-			readGPS()
-			readRTC()
-			Log()
-			Transmit()
-		}
-		void recovery()
-		{
-			readGPS()
-			Transmit()
-		}
-		
-		void readBMP180()
-		void readBNO055()
-		void readGPS()
-		void readRTC()
-		
-		void Log()
-		void Transmit()
-		
+public:
+	//variables:
+	[BMP180 Data Variables]
+	[BNO055 Data Variables]
+	char GPS_string[83]
+	char GPS_oldstring[83]
+	elapsedMillis GPS_extime;
+	int GPS_timeout = 100;
+	
+	//methods:
+	CDH()
+	void init()
+	
+	void flight()
+	{
+		readBMP180()
+		readBNO055()
+		readGPS()
+		readRTC()
+		Log()
+		Transmit()
+	}
+	void recovery()
+	{
+		readGPS()
+		Transmit()
+	}
+	
+	void readBMP180()
+	void readBNO055()
+	void readGPS()
+	{		
+		unsigned long start = millis();
+		GPS_extime = 0;
+		//char GPS_string[83];
+		//while(millis() - start < GPS_timeout) {
+			while (GPS.available() | GPS_extime < GPS_timeout) {
+				for(int i = 0; i < 82; i++)
+				{
+					GPS_string[i] = GPS.read();
+					//Serial.write(c); // uncomment this line if you want to see the GPS data flowing
+					if (gps.encode(GPS_string[i])) // Did a new valid sentence come in?
+					{
+						newData = true;
+						gps.f_get_position(&GPSLat, &GPSLong, &fix_age);
+						GPSAlt = gps.f_altitude();
+						GPSSats = gps.satellites();
+						//gps.get_datetime(&GPSDate, &cdh.data.MET, &fix_age);
+					}
+					GPS_string[i+1] = '\0';
+				}
+				debugln(GPS_string);
+				GPS_oldstring = GPS_string;
+			}
+		//}
+	}
+	void readRTC()
+	
+	void Log()
+	void Transmit()
+	
 }
 
 
