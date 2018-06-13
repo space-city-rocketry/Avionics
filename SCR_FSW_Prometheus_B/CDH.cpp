@@ -24,40 +24,40 @@ void CDH::init()
     debugln("ERROR: Failure to initialize BMP180");
     delay(1000);
   }
-  if(!bno.begin())
+  if (!bno.begin())
   {
     debugln("ERROR: Failure to initialize BNO055");
     delay(1000);
   }
-  
+
   XBEE.begin(9600);
-  
+
   GPS.begin(9600);
   GPS.println(PMTK_SET_NMEA_OUTPUT_RMCGGA); //Send GPS setup command
-//  GPS.println("$PMTK251,115200*1F"); //set to 115200
-//  GPS.begin(115200); //switch to 115200
-  
-  METStart = now();
-  debugln("CDH initialization complete"); 
+  //  GPS.println("$PMTK251,115200*1F"); //set to 115200
+  //  GPS.begin(115200); //switch to 115200
+
+  NOW = now();
+  METStart = NOW;
+  debugln("CDH initialization complete");
   delay(1000);
 
-  while(!GPS.available()){}
+  while (!GPS.available()) {}
 }
 
 void CDH::standby()
 {
-  //syncGPS();
   readBMP180();
   readBNO055();
-  
-  //readGPS();
-  //disp();
-  //plotTilt();
+  readRTC();
+  disp();
+  Transmit();
 }
 
 void CDH::flight()
 {
   //flight operations
+  standby();
 
 }
 
@@ -87,16 +87,16 @@ void CDH::readBNO055()
   accely = accel.y();
   accelz = accel.z();
 
-//  if (startupFlag == 1) {
-//    baselineAccel = accel.z();
-//    Serial.print(baselineAccel);
-//  }
+  //  if (startupFlag == 1) {
+  //    baselineAccel = accel.z();
+  //    Serial.print(baselineAccel);
+  //  }
 }
 
 void CDH::readGPS()
 {
   //GPS code
-  
+
   for (unsigned long start = millis(); millis() - start < GPS_timeout;) {
     while (GPS.available()) {
       char c = GPS.read();
@@ -114,18 +114,22 @@ void CDH::readGPS()
   Serial.println();
 }
 
-void CDH::syncGPS(Timer t)
+void CDH::syncGPS(elapsedMillis &TIME)
 {
-  while(!GPS.available() | GPS_ON == false) {t.update();}
-  if(GPS_ON){readGPS();}
-  //GPSsync = millis();
-  //debugln(GPSsync);
+  while (!GPS.available()) {}
+  Serial.print("GPS start; TIME = "); Serial.println(TIME);
+  TIME = 0;
+  readGPS();
 }
 
 void CDH::readRTC()
 {
   //RTC code
-  MET = METStart - now();
+  NOW = now();
+  MET = NOW - METStart;
+  MET_sec = second(MET);
+  MET_min = minute(MET);
+  MET_hour = hour(MET);
 }
 
 void CDH::Log()
@@ -136,35 +140,34 @@ void CDH::Log()
 void CDH::Transmit()
 {
   //Data transmission
+  xbeeln("Transmission Test");
+  xbee("Current Mission Elapsed Time (MET):\t");
+  xbee(MET_hour);xbee(":");xbee(MET_min);xbee(":");xbeeln(MET_sec);
 }
 
 void CDH::disp()
 {
   debugln("BMP180 Data:");
-  debug("bmpTemp: \t");debug(bmpTemp);debug("\tbmpPressure: \t");debugln(bmpPressure);
-  debug("bmpAltitude: \t");debug(bmpAltitude);debug("\tdeltaH: \t");debug(deltaH);
-  debugln();debugln("BNO055 Data:");
-  debug("tiltx: \t");debug(tiltx);debug("\taccelx: \t");debugln(accelx);
-  debug("tilty: \t");debug(tilty);debug("\taccely: \t");debugln(accely);
-  debug("tiltz: \t");debug(tiltz);debug("\taccelz: \t");debugln(accelz);
+  debug("bmpTemp: \t"); debug(bmpTemp); debug("\tbmpPressure: \t"); debugln(bmpPressure);
+  debug("bmpAltitude: \t"); debug(bmpAltitude); debug("\tdeltaH: \t"); debug(deltaH);
+  debugln(); debugln("BNO055 Data:");
+  debug("tiltx: \t"); debug(tiltx); debug("\taccelx: \t"); debugln(accelx);
+  debug("tilty: \t"); debug(tilty); debug("\taccely: \t"); debugln(accely);
+  debug("tiltz: \t"); debug(tiltz); debug("\taccelz: \t"); debugln(accelz);
+  debugln();debugln("Time Data:");
+  debug("MET:\t");
+  debug(MET_hour);debug(":");debug(MET_min);debug(":");debugln(MET_sec);
+  debug("CST:\t");
+  debug(hour(NOW));debug(":");debug(minute(NOW));debug(":");debugln(second(NOW));
+  debugln();
 }
 
 void CDH::plotTilt()
 {
-  debug(tiltx);debug(" ");debug(tilty);debug(" ");debug(tiltz);debugln(" ");
+  debug(tiltx); debug(" "); debug(tilty); debug(" "); debug(tiltz); debugln(" ");
 }
 
 /*  code to process time sync messages from the serial port   */
-unsigned long CDH::processSyncMessage() {
-  unsigned long pctime = 0L;
-  const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
 
-  if (Serial.find(TIME_HEADER)) {
-    pctime = Serial.parseInt();
-    return pctime;
-    if ( pctime < DEFAULT_TIME) { // check the value is a valid time (greater than Jan 1 2013)
-      pctime = 0L; // return 0 to indicate that the time is not valid
-    }
-  }
-  return pctime;
-}
+
+

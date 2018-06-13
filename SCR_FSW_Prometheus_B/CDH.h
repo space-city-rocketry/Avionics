@@ -22,12 +22,10 @@
 #define XBEE Serial1
 #define GPS Serial2
 
-
-#define TIME_HEADER  "T"   // Header tag for serial time sync message
 #define PMTK_SET_NMEA_OUTPUT_RMCGGA "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28"
 
-#define XBEEp(a) XBEE.print(a)
-#define XBEEpln(a) XBEE.println(a)
+#define xbee(a) XBEE.print(a)
+#define xbeeln(a) XBEE.println(a)
 
 
 
@@ -44,12 +42,16 @@ class CDH
     float accelx, accely, accelz;
 
     //RTC
-    unsigned long METStart;
-    unsigned long MET;
+    time_t NOW; //Current time in current time zone
+    time_t METStart;
+    time_t MET;
+    int MET_sec;
+    int MET_min;
+    int MET_hour;
 
     //GPS
     unsigned long GPSsync;
-    int GPS_timeout = 100;
+    int GPS_timeout = 200;
     bool GPS_ON = true;
     long GPSTime;
     float GPSLat;
@@ -81,7 +83,7 @@ class CDH
     void readBMP180();
     void readBNO055();
     void readGPS();
-    void syncGPS(Timer t);
+    void syncGPS(elapsedMillis &TIME);
     void readRTC();
 
     void Log();
