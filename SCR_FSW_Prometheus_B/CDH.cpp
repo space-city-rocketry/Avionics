@@ -167,7 +167,3 @@ void CDH::plotTilt()
   debug(tiltx); debug(" "); debug(tilty); debug(" "); debug(tiltz); debugln(" ");
 }
 
-/*  code to process time sync messages from the serial port   */
-
-
-

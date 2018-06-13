@@ -92,11 +92,6 @@ class CDH
     void disp();
     void plotTilt();
 
-    time_t getTeensy3Time(); //RTC function
-
-    unsigned long processSyncMessage();
-
-
 };
 
 
