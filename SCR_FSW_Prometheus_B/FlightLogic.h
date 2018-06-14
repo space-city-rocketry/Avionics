@@ -15,10 +15,10 @@ class FlightLogic
 {
   public:
     FlightLogic();
-    bool launchDetect();
-    bool apogeeDetect();
-    bool mainDetect();
-    bool landingDetect();
+    bool launchDetect(int Altitude, int Acceleration);
+    bool apogeeDetect(int DeltaH,int Acceleration);
+    bool mainDetect(int Altitude,int Acceleration);
+    bool landingDetect(int Altitude,int Acceleration);
 };
 
 #endif

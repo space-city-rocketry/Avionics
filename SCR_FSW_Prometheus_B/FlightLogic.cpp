@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "FlightLogic.h"
 
-FlightLogic::FlightLogic()
+FlightLogic::FlightLogic(){}
 
 
 bool FlightLogic::launchDetect(int Altitude, int Acceleration)
@@ -86,7 +86,7 @@ bool FlightLogic::mainDetect(int Altitude,int Acceleration)
   return status;
 }
 
-bool FlightLogic::landingDetect()
+bool FlightLogic::landingDetect(int Altitude,int Acceleration)
 {
   bool status = false;
   int n = 0;

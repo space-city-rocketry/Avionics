@@ -35,12 +35,12 @@ bool isSynced = false;
 unsigned long _start_;
 elapsedMillis TIME;
 
-enum FlightState {
-  Standby,
-  Ascent,
-  Descent,
-  Recovery
-};
+//enum FlightState {
+//  Standby,
+//  Ascent,
+//  Descent,
+//  Recovery
+//};
 
 FlightState state = Standby; //Save to EEPROM
 
@@ -78,7 +78,7 @@ void setup() {
   debugln("Debug ON");
 
 
-  cdh.init();
+  cdh.init(&state);
   t.every(ASCENT_RATE, ascent);//Function call?
 
   cdh.syncGPS(TIME); //Not a good place for this?
@@ -167,13 +167,13 @@ void standby()
 void ascent()
 {
   cdh.flight();
-  if (prometheus.launchDetect())
-    cdh.launch = true;
-  if (prometheus.apogeeDetect())
-  {
-    cdh.apogee = true;
-    state = Descent;
-  }
+//  if (prometheus.launchDetect())
+//    cdh.launch = true;
+//  if (prometheus.apogeeDetect())
+//  {
+//    cdh.apogee = true;
+//    state = Descent;
+//  }
 }
 
 void descent()

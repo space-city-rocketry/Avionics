@@ -9,6 +9,7 @@
 #include <TinyGPS.h>
 #include <TimeLib.h>
 #include <Timer.h>
+#include <SD.h>
 
 #define DEBUG
 #if defined DEBUG
@@ -27,7 +28,15 @@
 #define xbee(a) XBEE.print(a)
 #define xbeeln(a) XBEE.println(a)
 
+#define logdata(a) dataFile.print(a)
+#define logdataln(a) dataFile.println(a)
 
+enum FlightState {
+      Standby,
+      Ascent,
+      Descent,
+      Recovery
+    };
 
 class CDH
 {
@@ -61,10 +70,19 @@ class CDH
     bool newData; //GPS new data check
     unsigned long fix_age; //GPS fix age check
 
+    //Data Logger
+    File dataFile; //SD file
+    const int chipselect = -1; //To turn off data logging (debugging)
+    //const int chipselect = BUILTIN_SDCARD; //SD card chipselect variable
+    const char* fileName; //SD card file name
+
     //other data variables/objects:
     Adafruit_BNO055 bno = Adafruit_BNO055(55);
     Adafruit_BMP085 bmp;
     TinyGPS gps;
+    
+    FlightState *cdhstate;
+    String curState;
 
     //Detections
     bool launch = false;
@@ -74,7 +92,7 @@ class CDH
 
     //functions:
     CDH();
-    void init();
+    void init(FlightState *state);
 
     void standby();
     void flight();
@@ -86,12 +104,13 @@ class CDH
     void syncGPS(elapsedMillis &TIME);
     void readRTC();
 
-    void Log();
+    bool Log();
     void Transmit();
 
     void disp();
     void plotTilt();
 
+    void stateCheck();
 };
 
 
