@@ -22,9 +22,9 @@ enum TEST {
 TEST test_state = test_standby;
 
 //Data rate for ascent state
-#define ASCENT_RATE 100
+#define ASCENT_RATE 125 //8Hz Data Rate
 //Data rate for recovery rate
-#define REC_RATE 5000
+#define REC_RATE 5000 //0.2Hz Data Rate
 
 #define TIME_HEADER  "T"   // Header tag for serial time sync message
 
@@ -138,7 +138,7 @@ void standby()
         cdh.standby();
         debug("1b. TIME = "); debugln(TIME);
       }
-      if (TIME == 500)
+      if (TIME == 500) //Add error checking code
       {
         debug("2. TIME = "); debugln(TIME);
         delay(50);
@@ -166,6 +166,8 @@ void standby()
 void ascent()
 {
   cdh.flight();
+  debug("Elapsed Time:\t"); debugln(TIME);
+  debugln();
   //  if (prometheus.launchDetect())
   //    cdh.launch = true;
   //  if (prometheus.apogeeDetect())

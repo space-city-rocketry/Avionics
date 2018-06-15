@@ -31,25 +31,32 @@ void CDH::init(FlightState *state)
     delay(1000);
   }
 
-
-  fileName = "T_0614.txt"; //8 character limit
+  fileName = "T_0615.csv"; //8 character limit
   if (chipselect >= 0) {
+    logging = true;
     if (!SD.begin(chipselect)) {
       debugln("ERROR: Failure to initialize SD Logger");
+      logging = false;
     }
-  }else{
+  } else {
+    logging = false;
     debugln("Data logging OFF");
   }
-  //Print file headers:
-  dataFile = SD.open(fileName, FILE_WRITE);
-  if (dataFile)
-  {
-    logdataln("Altitude,\tPressure,\tTemperature,\tDeltaH,\tAcceleration X,\tY,\tZ,\tOrientation X,\tY,\tZ,\tGPS Latitude,\tGPS Longitude,\tMET");
-    dataFile.close();
-  } else{ debugln("ERROR: Unknown error when opening data file");}
-
+  if (logging) {
+    //Print file headers:
+    dataFile = SD.open(fileName, FILE_WRITE);
+    if (dataFile)
+    {
+      logdataln("MET,\tAltitude,\tPressure,\tTemperature,\tDeltaH,\tAcceleration X,\tY,\tZ,\tOrientation X,\tY,\tZ,\tGPS Latitude,\tGPS Longitude,\tSoftware State");
+      dataFile.close();
+    } else {
+      debugln("ERROR: Unknown error when opening data file");
+      logging = false;
+    }
+  }
 
   XBEE.begin(9600);
+  packetCnt = 0;
 
   GPS.begin(9600);
   GPS.println(PMTK_SET_NMEA_OUTPUT_RMCGGA); //Send GPS setup command
@@ -66,12 +73,14 @@ void CDH::init(FlightState *state)
 
 void CDH::standby()
 {
+  elapsedMillis execTime;
   readBMP180();
   readBNO055();
   readRTC();
   disp();
   Transmit();
   Log();
+  debug("Execution Time:\t");debugln(execTime);
 }
 
 void CDH::flight()
@@ -106,6 +115,7 @@ void CDH::readBNO055()
   accelx = accel.x();
   accely = accel.y();
   accelz = accel.z();
+  accelMag = sqrt(sq(accelx) + sq(accely) + sq(accelz));
 
   //  if (startupFlag == 1) {
   //    baselineAccel = accel.z();
@@ -155,38 +165,42 @@ void CDH::readRTC()
 bool CDH::Log()
 {
   //Data logging
-  dataFile = SD.open(fileName, FILE_WRITE);
-  if (dataFile)
-  {
-    logdata(bmpAltitude); logdata(",\t"); logdata(bmpPressure); logdata(",\t"); logdata(bmpTemp); logdata(",\t"); logdata(deltaH); logdata(",\t");
-    logdata(accelx); logdata(",\t"); logdata(accely); logdata(",\t"); logdata(accelz); logdata(",\t");
-    logdata(tiltx); logdata(",\t"); logdata(tilty); logdata(",\t"); logdata(tiltz); logdata(",\t");
-    logdata(GPSLat); logdata(",\t"); logdata(GPSLong); logdata(",\t");
-    logdata(MET_hour); logdata(":"); logdata(MET_min); logdata(":"); logdata(MET_sec);logdata(",\t");
-    stateCheck();
-    logdata(curState);
-    logdataln();
+  if (logging) {
+    dataFile = SD.open(fileName, FILE_WRITE);
+    if (dataFile)
+    {
+      logdata(MET_hour); logdata(":"); logdata(MET_min); logdata(":"); logdata(MET_sec); logdata(",");
+      logdata(bmpAltitude); logdata(","); logdata(bmpPressure); logdata(","); logdata(bmpTemp); logdata(","); logdata(deltaH); logdata(",");
+      logdata(accelx); logdata(","); logdata(accely); logdata(","); logdata(accelz); logdata(",");
+      logdata(tiltx); logdata(","); logdata(tilty); logdata(","); logdata(tiltz); logdata(",");
+      logdata(GPSLat); logdata(","); logdata(GPSLong); logdata(",");
+      stateCheck();
+      logdata(curState);
+      logdataln();
       dataFile.close();
       return true;
     } else {
-    return false;
+      return false;
+    }
   }
 }
 
 void CDH::Transmit()
-{
+{ //Add checksum for error checking?
   //Data transmission
-  xbee(bmpAltitude); xbee(",\t"); xbee(bmpPressure); xbee(",\t"); xbee(bmpTemp); xbee(",\t"); xbee(deltaH); xbee(",\t");
-  xbee(accelx); xbee(",\t"); xbee(accely); xbee(",\t"); xbee(accelz); xbee(",\t");
-  xbee(tiltx); xbee(",\t"); xbee(tilty); xbee(",\t"); xbee(tiltz); xbee(",\t");
-  xbee(GPSLat); xbee(",\t"); xbee(GPSLong); xbee(",\t");
-  xbee(MET_hour); xbee(":"); xbee(MET_min); xbee(":"); xbee(MET_sec);xbee(",\t");
+  packetCnt++;
+  xbee("$XBEE,"); xbee(packetCnt); xbee(","); //Packet start
+  xbee(MET_hour); xbee(":"); xbee(MET_min); xbee(":"); xbee(MET_sec); xbee(","); //MET
+  xbee(bmpAltitude); xbee(","); xbee(bmpPressure); xbee(","); xbee(bmpTemp); xbee(","); xbee(deltaH); xbee(","); //BMP180
+  xbee(accelx); xbee(","); xbee(accely); xbee(","); xbee(accelz); xbee(","); //BNO055 Accel
+  xbee(tiltx); xbee(","); xbee(tilty); xbee(","); xbee(tiltz); xbee(","); //BNO055 Tilt
+  xbee(GPSLat); xbee(","); xbee(GPSLong); xbee(","); //GPS
   stateCheck();
-  xbee(curState);
+  xbee(curState); //State
   xbeeln();
-  }
+}
 
-  void CDH::disp()
+void CDH::disp()
 {
   debugln("BMP180 Data:");
   debug("bmpTemp: \t"); debug(bmpTemp); debug("\tbmpPressure: \t"); debugln(bmpPressure);
@@ -195,13 +209,14 @@ void CDH::Transmit()
   debug("tiltx: \t"); debug(tiltx); debug("\taccelx: \t"); debugln(accelx);
   debug("tilty: \t"); debug(tilty); debug("\taccely: \t"); debugln(accely);
   debug("tiltz: \t"); debug(tiltz); debug("\taccelz: \t"); debugln(accelz);
+  debug("Acceleration Magnitude: \t");debugln(accelMag);
   debugln(); debugln("Time Data:");
   debug("MET:\t");
   debug(MET_hour); debug(":"); debug(MET_min); debug(":"); debugln(MET_sec);
   debug("CST:\t");
   debug(hour(NOW)); debug(":"); debug(minute(NOW)); debug(":"); debugln(second(NOW));
   stateCheck();
-  debug("Current State: ");debugln(curState);
+  debug("Current State: "); debugln(curState);
   debugln();
 }
 
@@ -212,9 +227,17 @@ void CDH::plotTilt()
 
 void CDH::stateCheck()
 {
-  if(*cdhstate == Standby){curState = "Standby";}
-  if(*cdhstate == Ascent){curState = "Ascent";}
-  if(*cdhstate == Descent){curState = "Descent";}
-  if(*cdhstate == Recovery){curState = "Recovery";}
+  if (*cdhstate == Standby) {
+    curState = "Standby";
+  }
+  if (*cdhstate == Ascent) {
+    curState = "Ascent";
+  }
+  if (*cdhstate == Descent) {
+    curState = "Descent";
+  }
+  if (*cdhstate == Recovery) {
+    curState = "Recovery";
+  }
 }
 

@@ -46,9 +46,11 @@ class CDH
     float bmpPressure;
     float bmpTemp;
     float deltaH, AltOld;
+    
     //BNO055 data variables:
     float tiltx, tilty, tiltz;
     float accelx, accely, accelz;
+    float accelMag;
 
     //RTC
     time_t NOW; //Current time in current time zone
@@ -59,6 +61,7 @@ class CDH
     int MET_hour;
 
     //GPS
+    TinyGPS gps;
     unsigned long GPSsync;
     int GPS_timeout = 200;
     bool GPS_ON = true;
@@ -72,15 +75,19 @@ class CDH
 
     //Data Logger
     File dataFile; //SD file
-    const int chipselect = -1; //To turn off data logging (debugging)
-    //const int chipselect = BUILTIN_SDCARD; //SD card chipselect variable
+    //const int chipselect = -1; //To turn off data logging (debugging)
+    const int chipselect = BUILTIN_SDCARD; //SD card chipselect variable
     const char* fileName; //SD card file name
+    bool logging;
 
-    //other data variables/objects:
+    //Transmitter
+    int packetCnt;
+
+    //Sensors
     Adafruit_BNO055 bno = Adafruit_BNO055(55);
     Adafruit_BMP085 bmp;
-    TinyGPS gps;
     
+    //States
     FlightState *cdhstate;
     String curState;
 
