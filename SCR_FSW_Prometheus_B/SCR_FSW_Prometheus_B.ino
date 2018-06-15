@@ -23,14 +23,16 @@ TEST test_state = test_standby;
 
 //Data rate for ascent state
 #define ASCENT_RATE 100
+//Data rate for recovery rate
+#define REC_RATE 5000
 
 #define TIME_HEADER  "T"   // Header tag for serial time sync message
 
 CDH cdh;
 FlightLogic prometheus;
 
-Timer t;
-Timer SYNC;
+Timer t_ascent;
+Timer t_recovery;
 bool isSynced = false;
 unsigned long _start_;
 elapsedMillis TIME;
@@ -79,8 +81,8 @@ void setup() {
 
 
   cdh.init(&state);
-  t.every(ASCENT_RATE, ascent);//Function call?
-
+  t_ascent.every(ASCENT_RATE, ascent);//Function call?
+  t_recovery.every(REC_RATE, recovery);
   cdh.syncGPS(TIME); //Not a good place for this?
 }
 
@@ -92,19 +94,15 @@ void loop() {
   {
     case Standby:
       standby();
-      //debugln("standby");
       break;
     case Ascent:
-      ascent();
-      debugln("ascent");
+      t_ascent.update();
       break;
     case Descent:
       descent();
-      debugln("descent");
       break;
     case Recovery:
-      recovery();
-      debugln("recovery");
+      t_recovery.update();
       break;
   }
 }
@@ -130,7 +128,7 @@ void standby()
       break;
     case test_ascent:
       //Ascent Prototype
-      t.update();
+      t_ascent.update();
       break;
     case test_descent:
       //Descent Prototype
@@ -160,6 +158,7 @@ void standby()
       break;
     case test_recovery:
       //Recovery Prototype
+      t_recovery.update();
       break;
   }
 }
@@ -167,39 +166,40 @@ void standby()
 void ascent()
 {
   cdh.flight();
-//  if (prometheus.launchDetect())
-//    cdh.launch = true;
-//  if (prometheus.apogeeDetect())
-//  {
-//    cdh.apogee = true;
-//    state = Descent;
-//  }
+  //  if (prometheus.launchDetect())
+  //    cdh.launch = true;
+  //  if (prometheus.apogeeDetect())
+  //  {
+  //    cdh.apogee = true;
+  //    state = Descent;
+  //  }
 }
 
 void descent()
 {
   if (TIME == 250 )
   {
-    Serial.print("1. TIME = "); Serial.println(TIME);
-    delay(50);
+    debug("1a. TIME = "); debugln(TIME);
+    cdh.flight();
+    debug("1b. TIME = "); debugln(TIME);
   }
   if (TIME == 500)
   {
-    Serial.print("2. TIME = "); Serial.println(TIME);
+    debug("2. TIME = "); debugln(TIME);
     delay(50);
   }
   if (TIME == 750)
   {
-    Serial.print("3. TIME = "); Serial.println(TIME);
-    delay(50);
+    debug("3a. TIME = "); debugln(TIME);
+    cdh.flight();
+    debug("3b. TIME = "); debugln(TIME);
   }
   if (TIME > 800)
   {
-    Serial.print("4. TIME = "); Serial.println(TIME);
+    debug("4. TIME = "); debugln(TIME);
     cdh.syncGPS(TIME);
-    Serial.print("Post GPS; TIME = "); Serial.println(TIME);
+    debug("Post GPS; TIME = "); debugln(TIME);
   }
-  //  cdh.flight();
   //  if (prometheus.mainDetect())
   //    cdh.main = true;
   //  if (prometheus.landingDetect())
@@ -212,7 +212,7 @@ void descent()
 
 void recovery()
 {
-  cdh.recovery();
+  cdh.syncGPS(TIME);
 }
 
 void inputCheck()
