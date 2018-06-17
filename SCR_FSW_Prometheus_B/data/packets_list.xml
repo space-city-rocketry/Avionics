@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<data>
+  <loop>false</loop>
+  <repeat_times>1</repeat_times>
+  <repeat_period>500</repeat_period>
+  <packets_list>
+    <packet name="packet_0">
+      <payload>68656C70</payload>
+    </packet>
+    <packet name="packet_1">
+      <payload>617363656E74</payload>
+    </packet>
+    <packet name="packet_2">
+      <payload>64657363656E74</payload>
+    </packet>
+    <packet name="packet_3">
+      <payload>7265636F76657279</payload>
+    </packet>
+    <packet name="packet_4">
+      <payload>71</payload>
+    </packet>
+  </packets_list>
+</data>

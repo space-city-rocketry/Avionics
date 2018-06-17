@@ -93,6 +93,9 @@ void CDH::flight()
 void CDH::recovery()
 {
   //recovery operations
+  readRTC();
+  Transmit();
+  Log();
 }
 
 void CDH::readBMP180()
@@ -131,6 +134,7 @@ void CDH::readGPS()
     while (GPS.available()) {
       char c = GPS.read();
       Serial.write(c); // uncomment this line if you want to see the GPS data flowing
+      XBEE.write(c);
       if (gps.encode(c)) // Did a new valid sentence come in?
       {
         newData = true;

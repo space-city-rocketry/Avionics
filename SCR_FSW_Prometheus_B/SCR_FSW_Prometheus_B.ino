@@ -70,9 +70,9 @@ void setup() {
   _start_ = now();
 
   Serial.begin(115200);
-#ifdef DEBUG
-  while (!Serial) {}
-#endif
+//#ifdef DEBUG
+//  while (!Serial) {}
+//#endif
 
   //if necessary:
   //prometheus.init();
@@ -215,6 +215,7 @@ void descent()
 void recovery()
 {
   cdh.syncGPS(TIME);
+  cdh.recovery();
 }
 
 void inputCheck()
@@ -254,6 +255,44 @@ void inputCheck()
       Serial.println("descent - Turns on descent testing mode");
       Serial.println("recovery - Turns on recovery testing mode");
       Serial.println("\nReturning to program in 10 seconds...\n");
+      delay(10000);
+    }
+  }
+  if (XBEE.available() > 0) {
+    String input = XBEE.readString();
+    XBEE.print("String received: "); XBEE.println(input);
+    if (input == "ascent")
+    {
+      XBEE.println("\nAscent Testing Mode ON\n");
+      delay(1000);
+      test_state = test_ascent;
+    }
+    if (input == "descent")
+    {
+      XBEE.println("\nDescent Testing Mode ON\n");
+      delay(1000);
+      test_state = test_descent;
+    }
+    if (input == "recovery")
+    {
+      XBEE.println("\nRecovery Testing Mode ON\n");
+      delay(1000);
+      test_state = test_recovery;
+    }
+    if (input == "q" | input == "exit" | input == "stop")
+    {
+      XBEE.println("\nReturning to Standby State\n");
+      delay(1000);
+      test_state = test_standby;
+    }
+    if (input == "help" | input == "HELP")
+    {
+      XBEE.println("Type in any of the following commands to change the software state:");
+      XBEE.println(" ");
+      XBEE.println("ascent - Turns on ascent testing mode");
+      XBEE.println("descent - Turns on descent testing mode");
+      XBEE.println("recovery - Turns on recovery testing mode");
+      XBEE.println("\nReturning to program in 10 seconds...\n");
       delay(10000);
     }
   }
